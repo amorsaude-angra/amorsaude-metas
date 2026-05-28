@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Amor Saúde — Metas Joinville</title>
+  <title>Amor Saúde — Metas Angra dos Reis</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -724,7 +724,7 @@
     <div class="login-logo">
       <div class="heart">❤️</div>
       <div class="marca">Amor Saúde</div>
-      <div class="sub">Joinville — Sistema de Metas</div>
+      <div class="sub">Angra dos Reis — Sistema de Metas</div>
     </div>
 
     <div id="erro-login" class="erro-box hidden">Senha incorreta. Tente novamente.</div>
@@ -787,7 +787,7 @@
 
   <!-- Header fixo — deve vir ANTES das abas para o sticky funcionar corretamente -->
   <div id="header">
-    <div class="h-logo">Amor Saúde <span>Joinville</span></div>
+    <div class="h-logo">Amor Saúde <span>Angra dos Reis</span></div>
     <div class="h-right">
       <div class="badge-mes" id="badge-mes">—</div>
       <div id="auto-refresh-ind" title="Atualização automática a cada 2 minutos"
@@ -2388,12 +2388,13 @@
 //  🔥 FIREBASE — SUBSTITUA PELOS SEUS DADOS DO CONSOLE
 // ═══════════════════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey:            "AIzaSyAkK1m2YCQ2DRBUfgqiMRXFQ2Vr4MFgGxU",
-  authDomain:        "amorsaude-metas.firebaseapp.com",
-  projectId:         "amorsaude-metas",
-  storageBucket:     "amorsaude-metas.firebasestorage.app",
-  messagingSenderId: "713487772865",
-  appId:             "1:713487772865:web:226d80757f4b4567f1b840"
+  apiKey:            "AIzaSyAQ_UA-ja7t69tn7klXJob8wifRAesiet8",
+  authDomain:        "amorsaude-angra.firebaseapp.com",
+  projectId:         "amorsaude-angra",
+  storageBucket:     "amorsaude-angra.firebasestorage.app",
+  messagingSenderId: "208058404129",
+  appId:             "1:208058404129:web:04b3422258fe6da27d0260",
+  measurementId:     "G-RZVJC2GEWD"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -2403,33 +2404,21 @@ const auth = firebase.auth();
 // ═══════════════════════════════════════════════════════════
 //  DADOS DOS USUÁRIOS
 // ═══════════════════════════════════════════════════════════
-// Chave = email real do Firebase Auth; valor = { nome, perfil }
+// Chave = UID do Firebase Auth; valor = { nome, perfil, email }
 // Perfis disponíveis:
-// - gestor:           acesso total (Laudenir)
-// - subgestora:       acesso quase total (Eduarda)
-// - lider:            gerencia recepção (Dara, Bianca) — também atende como recepcionista
-// - lider_callcenter: gerencia callcenter (Andrielli)
-// - coordenadora:     gerencia callcenter (Paola) — mesmas permissões de lider_callcenter
-// - recepcionista:    atende e lança (recepcionistas comuns)
-// - callcenter:       atende e lança (Erielly, Júlia)
-// - financeiro:       só visualiza/exporta relatórios (Thifani, Leila) — sem aba de lançamento
+// - gestor:        acesso total (Laudenir)
+// - subgestora:    acesso quase total (Karoane, Eduarda)
+// - coordenador:   gerencia recepção (Gabriel)
+// - recepcionista: atende e lança (recepcionistas comuns)
 const USUARIOS = {
-  "laudi.rmj@gmail.com":               { nome: "Laudenir",  perfil: "gestor"           },
-  "eduardaaraujo1502@gmail.com":       { nome: "Eduarda",   perfil: "subgestora"       },
-  "paola7ccristino@gmail.com":         { nome: "Paola",     perfil: "coordenadora"     },
-  "darafidelesmarques@gmail.com":      { nome: "Dara",      perfil: "lider"            },
-  "bianca.trazibulo@gmail.com":        { nome: "Bianca",    perfil: "lider"            },
-  "andriellisouza45@gmail.com":        { nome: "Andrielli", perfil: "lider_callcenter" },
-  "stefany.dsgcs@gmail.com":           { nome: "Dawilla",   perfil: "recepcionista"    },
-  "susuh.medeiros28@gmail.com":        { nome: "Suélen",    perfil: "recepcionista"    },
-  "graziiaraujo8@gmail.com":           { nome: "Graziele",  perfil: "recepcionista"    },
-  "fagundestuane99@gmail.com":         { nome: "Tuane",     perfil: "recepcionista", status: "afastada" },
-  "raiiane.almeida1401@gmail.com":     { nome: "Raiane",    perfil: "recepcionista"    },
-  "leticiaac.r.eis@gmail.com":         { nome: "Leticia",   perfil: "recepcionista"    },
-  "eriellypachecodossantos@gmail.com": { nome: "Erielly",   perfil: "callcenter"       },
-  "juluise2005@gmail.com":             { nome: "Júlia",     perfil: "callcenter"       },
-  "thifanie.timm@gmail.com":           { nome: "Thifani",   perfil: "financeiro"       },
-  "leilacarvalhom@hotmail.com":        { nome: "Leila",     perfil: "financeiro"       },
+  "UOyBt0cwuIR7YcLgq8lriIDpi8E3": { nome: "Laudenir",          perfil: "gestor",        email: "laudi.rmj@gmail.com" },
+  "xic5R9XCEWh87i4V74jPgPl1Bap1": { nome: "Karoane",           perfil: "subgestora",    email: "financeiro.angrarj@gmail.com" },
+  "DDTWfzgKcZcQbpdQFbtsgUbDsx12": { nome: "Eduarda",           perfil: "subgestora",    email: "eduardaaraujo1502@gmail.com" },
+  "eYxInJlRwoQ86pSpFSPh2Wczjiv1": { nome: "Gabriel",           perfil: "coordenador",   email: "gsantospereira90@gmail.com" },
+  "eeQsPJl3imMTahadhDyjcVNBWMS2": { nome: "Yasmin Oliveira",   perfil: "recepcionista", email: "yasminoliveira2404@icloud.com" },
+  "HbDPzVrkrpbAPQsSNqLmIzXMpOO2": { nome: "Yasmin Pimentel",   perfil: "recepcionista", email: "yasmin.pimentel@hotmail.com" },
+  "ZKUZ5vimhEg1r7Wq06YNqgzilo83": { nome: "Gabriela Cardoso",  perfil: "recepcionista", email: "gabrielacardosorocharj@gmail.com" },
+  "wHh9a0mtyofUmWpFT0znli26LHM2": { nome: "Leticia Eleoterio", perfil: "recepcionista", email: "leticia.eleoterio23@gmail.com" },
 };
 
 // Mapa derivado: nome → perfil (para lookups internos por nome de exibição)
@@ -2439,7 +2428,8 @@ const PERFIS = Object.fromEntries(
 
 // Retorna o email real de uma usuária pelo nome de exibição
 function emailPorNome(nome) {
-  return Object.keys(USUARIOS).find(e => USUARIOS[e].nome === nome) || null;
+  const u = Object.values(USUARIOS).find(x => x.nome === nome);
+  return u?.email || null;
 }
 
 // Status de colaboradora: "afastada" (Tuane) bloqueia login mas mantém histórico.
@@ -2451,34 +2441,37 @@ function statusPorNome(nome) {
 function ehAfastada(nome) { return statusPorNome(nome) === "afastada"; }
 
 const PERFIL_LABEL = {
-  gestor:"Gestor", subgestora:"Sub-Gestora", coordenadora:"Coordenadora",
-  lider:"Líder", lider_callcenter:"Líder Call Center",
-  recepcionista:"Recepcionista Médica", callcenter:"Call Center",
+  gestor:"Gestor", subgestora:"Sub-Gestora",
+  coordenador:"Coordenador", coordenadora:"Coordenadora",
+  lider:"Líder",
+  recepcionista:"Recepcionista Médica",
   financeiro:"Financeiro"
 };
 
 // Atendentes de Call Center supervisionadas pela coordenadora
 const CC_MEMBROS = ["Erielly","Júlia"];
 const CC_TODOS   = ["Erielly","Júlia"];
+// TODO: configurar metas de Angra
 // Meta fixa de caixa por atendente CC (usada na coordenadora quando não há meta configurada)
-const META_CC_PADRAO = 28000;
+const META_CC_PADRAO = 0;
 
+// TODO: configurar metas de Angra
 // Metas padrão da EQUIPE — valores independentes, NÃO são soma das metas individuais
 const METAS_EQUIPE_PADRAO = {
-  meta_caixa_equipe:              740000,
-  meta_credito_equipe:            130000,
-  meta_boleto_equipe:              25000,
-  meta_lab_equipe:                273000,
-  meta_img_equipe:                144000,
-  meta_proc_equipe:               227500,
-  meta_injetaveis_equipe:          60000,
-  meta_caixa_callcenter_equipe:    56000,
+  meta_caixa_equipe:              0,
+  meta_credito_equipe:            0,
+  meta_boleto_equipe:             0,
+  meta_lab_equipe:                0,
+  meta_img_equipe:                0,
+  meta_proc_equipe:               0,
+  meta_injetaveis_equipe:         0,
+  meta_caixa_callcenter_equipe:   0,
 };
 
 // Perfis que têm meta de crédito
 const TEM_CREDITO = ["recepcionista","lider"];
 // Perfis que fazem lançamento
-const FAZ_LANC = ["recepcionista","callcenter","lider","lider_callcenter"];
+const FAZ_LANC = ["recepcionista","lider"];
 // Perfis que vêem o dashboard geral
 const VE_DASHBOARD = ["gestor","subgestora","lider"];
 // Perfis que SÓ vêem o dashboard geral (sem aba de lançamento)
@@ -2491,14 +2484,14 @@ const SO_RELATORIOS = ["financeiro"];
 //   - líder de recepção: vê apenas recepção
 //   - líder de call center: vê apenas call center
 //   - financeiro: vê todos
-const VE_RELATORIOS = ["gestor","subgestora","coordenadora","lider","lider_callcenter","financeiro"];
+const VE_RELATORIOS = ["gestor","subgestora","coordenador","coordenadora","lider","financeiro"];
 
 // Perfis que podem baixar o backup completo do sistema (operação sensível —
 // arquivo contém TODOS os dados). Inclui variantes masculino/feminino dos cargos.
 const VE_BACKUP = [
   "gestor", "subgestor", "subgestora",
   "coordenador", "coordenadora",
-  "lider", "lider_callcenter",
+  "lider",
   "financeiro",
 ];
 
@@ -2591,7 +2584,7 @@ function mapearFormaPagamento(forma, valor) {
 }
 
 // Perfis autorizados a editar lançamentos (regra D-Edição da Fase E)
-const PODE_EDITAR_LANC = ["gestor","subgestora","coordenadora","lider","lider_callcenter"];
+const PODE_EDITAR_LANC = ["gestor","subgestora","coordenador","coordenadora","lider"];
 
 // Detecta se um documento já está no novo schema unificado.
 // Olha por presença de qualquer campo característico do modelo novo.
@@ -2786,7 +2779,7 @@ const MOTIVOS_RECUSA = [
 function ehRecusado(l)        { return l && l.status === "recusado"; }
 function podeMarcarRecusa()   { return mesAno >= MARCO_NOVO_MODELO; }
 // Perfis com dashboard próprio de coordenação (painel Call Center)
-const VE_COORD = ["coordenadora","lider_callcenter"];
+const VE_COORD = ["coordenador","coordenadora"];
 
 // Premiação coletiva (pool) para Lab, Imagem, Procedimentos e Crédito
 const POOL_REC_EXCLUIDOS = ["Tuane", "Thamyres"];  // não participam do pool
@@ -2807,60 +2800,31 @@ const FAIXAS_POOL_CRED   = [{pct:1.0,pool:500}, {pct:0.9,pool:375}, {pct:0.8,poo
 //  PRESCRITORES
 // ═══════════════════════════════════════════════════════════
 const PRESCRITORES = [
-  ["Adriano Maia Siqueira","Urologia"],
-  ["Amanda Calixto e Silva","Cirurgia Geral"],
-  ["Ana Beatriz Brito de Sousa","Clínica Médica"],
-  ["Ana Paula Oliveira do Nascimento","Clínica Médica"],
-  ["André Ricardo Merkle","Otorrinolaringologia"],
-  ["Antônio Geraldo Pacheco Barbosa","Cardiologia"],
-  ["Ariadne Ayumi Sakashita","Otorrinolaringologia"],
-  ["Biane Lara da Silva de Pinho","Clínica Médica"],
-  ["Bruno Ferlin Saccomani Barbosa","Clínica Médica"],
-  ["Caetano da Costa Souza","Clínica Médica"],
-  ["Carlos Igor do Rosário Silva","Oftalmologia"],
-  ["Carolina Godoy","Clínica Médica"],
-  ["Carolina Mazuchini Belai","Gastroenterologia"],
+  ["Allyne de Assunção Maciel","Clínico/Pediatria"],
+  ["Carlos Alberto Bastos Mattos Junior","Ultrassom"],
   ["Claudio Silva Faria","Ortopedia"],
-  ["Dayana Marafon","Nutrição"],
-  ["Dayna Eleuterio","Clínica Médica"],
-  ["Eduarda Thomazi Bioni Antoniak Santos","Clínica Médica"],
-  ["Elianete Ramos de Lemos","Pediatria"],
-  ["Emanuel Antoniak Santos","Endocrinologia"],
-  ["Felipe Fanine de Souza","Neurologia"],
-  ["Felipe Francisco Favaretto","Oftalmologia"],
-  ["Fernanda Aparecida Bach","Dermatologia"],
-  ["Fernanda Rangel Bernardi","Oftalmologia"],
-  ["Frederico Falcão Leal Brotero Duprat","Psicologia"],
-  ["Gabriel da Silva Lugli","Clínica Médica"],
-  ["Gabriel Nogueira Cavalcante","Oftalmologia"],
-  ["Gonzalo Fernando Oblitas Alvarez","Otorrinolaringologia"],
-  ["Hellen Cristine da Silveira","Clínica Médica"],
-  ["Iara Medeiros de Souza","Oftalmologia"],
-  ["Igor Araújo Krajewski","Clínica Médica"],
-  ["Jucielly Ribeiro Mendonça","Psiquiatria"],
-  ["Leonardo Martins Azeredo","Clínica Médica"],
-  ["Liliane Rochemback","Endocrinologia"],
-  ["Luísa Calvet Benkendorf","Psicologia"],
-  ["Marcelo Fernandes Zveiter","Cardiologia"],
-  ["Mariani Laurentino Jesuino","Ginecologia e Obstetrícia"],
-  ["Mario Ricardo Pinheiro Coelho","Psiquiatria"],
-  ["Milena Klettenberg Fagundes","Clínica Médica"],
-  ["Omar Pacheco Cardoso","Ortopedia"],
-  ["Otniel Alves Leoncio de Almeida","Reumatologia"],
-  ["Paola Moretti","Clínica Médica"],
-  ["Renan Kenzo Taguchi","Oftalmologia"],
-  ["Renee Perly de Lima","Endocrinologia"],
-  ["Silmara Cristina Ribeiro Cardoso","Psicologia"],
-  ["Suellen Meira França","Psiquiatria"],
-  ["Sussett Rodriguez Dominguez","Medicina da Família"],
-  ["Thiene Takazono Moreno","Clínica Médica"],
-  ["Valéria Catharina Theodorovitz","Ginecologia e Obstetrícia"],
-  ["Vanessa Andria De Carvalho","Psicologia"],
-  ["Vanessa Wandeur Mierzwa","Cardiologia"],
-  ["Vitória Raissa Prada Fronza","Clínica Médica"],
-  ["Vivian Andrea Acosta Justiniano","Nutrição"],
-  ["Washington Luiz Gomes","Oftalmologia"],
-  ["Willian Palhano de Moura","Dermatologia"],
+  ["Críslei Ribeiro","Psicologia"],
+  ["Ecila Macedo Rodrigues","Pneumologia"],
+  ["Emedilson Garcia De Magalhaes Jr.","Cardiologia/Ecocardio"],
+  ["Erica Raniere da Silva Bredo","Psicologia"],
+  ["Iatan Handerson Soares Xavier","Psiquiatria"],
+  ["Ivan Nogueira Junior","Ortopedia"],
+  ["Ivo Tannuri Filho","Ginecologia e Obstetrícia"],
+  ["João Luiz Castro Moraes","Neurologia"],
+  ["Jorge João Ferreira de Souza Junior","Oftalmologia"],
+  ["Juciane Priscila Lima Pereira Maia","Endocrinologia"],
+  ["Julia Gati","Ginecologia"],
+  ["Leonardo Duarte","Cardiologia"],
+  ["Lucas Matheus","RX"],
+  ["Luiz Carlos Ferreira Da Silva","Fonoaudiologia"],
+  ["Luiz Felipe De Deus Rodrigues","Nutricionista"],
+  ["Magna Teixeira Gomes","Endocrinologia"],
+  ["Mauricio Barban","Dermatologia/Alergista"],
+  ["Michele de Almeida","Dermatologia"],
+  ["Nathália Rezende","Pediatria"],
+  ["Sergio Simonsen","Ultrassom"],
+  ["Verônica Lucia Oliveira","Geriatria/Endocrinologia"],
+  ["Wagner Duarte","Ultrassom"],
   ["Profissional Externo",""],
 ];
 
@@ -2969,10 +2933,10 @@ function brl(v) { return (v||0).toLocaleString("pt-BR",{style:"currency",currenc
 //  FERIADOS 2026 — lista fixa + Firestore
 // ═══════════════════════════════════════════════════════════
 
-// Feriados fixos: nacionais + municipais de Joinville
+// Feriados fixos: nacionais + municipais de Angra dos Reis
 const FERIADOS_2026 = [
   { data: "2026-01-01", nome: "Confraternização Universal" },
-  { data: "2026-03-09", nome: "Aniversário de Joinville" },
+  { data: "2026-01-06", nome: "Aniversário de Angra dos Reis" },
   { data: "2026-04-03", nome: "Sexta-feira Santa" },
   { data: "2026-04-04", nome: "Sábado Santo" },
   { data: "2026-05-01", nome: "Dia do Trabalho" },
@@ -3400,13 +3364,14 @@ document.getElementById("inp-senha").addEventListener("keypress", e => {
 
 // Senhas locais — fallback enquanto Firebase Auth não estiver configurado
 const SENHAS_LOCAL = {
-  "Laudenir":  "amor2026CONTEXTO",
-  "Eduarda":   "amor2026", "Paola":     "amor2026", "Dara":      "amor2026",
-  "Bianca":    "amor2026", "Andrielli": "amor2026", "Dawilla":   "amor2026",
-  "Suélen":    "amor2026", "Graziele":  "amor2026",
-  "Raiane":    "amor2026", "Leticia":   "amor2026",
-  "Erielly":   "amor2026", "Júlia":     "amor2026",
-  "Thifani":   "amor2026", "Leila":     "amor2026",
+  "Laudenir":          "Angra2026@",
+  "Karoane":           "Angra2026@",
+  "Eduarda":           "Angra2026@",
+  "Gabriel":           "Angra2026@",
+  "Yasmin Oliveira":   "Angra2026@",
+  "Yasmin Pimentel":   "Angra2026@",
+  "Gabriela Cardoso":  "Angra2026@",
+  "Leticia Eleoterio": "Angra2026@",
 };
 
 // Login: tenta Firebase Auth; se não configurado, usa senha local como fallback
@@ -3543,10 +3508,10 @@ function fazerLogout() {
 // Nota: só age se houver sessão Firebase ativa; login local não é persistido
 auth.onAuthStateChanged(async fbUser => {
   if(fbUser) {
-    // Sessão Firebase válida — identifica a usuária pelo email (chave do objeto USUARIOS)
-    const u = USUARIOS[fbUser.email];
+    // Sessão Firebase válida — identifica a usuária pelo UID (chave do objeto USUARIOS)
+    const u = USUARIOS[fbUser.uid];
     if(!u) {
-      console.warn("[Auth] Email não reconhecido:", fbUser.email);
+      console.warn("[Auth] UID não reconhecido:", fbUser.uid, fbUser.email);
       auth.signOut(); return;
     }
     if(u.status === "afastada") {
@@ -3585,9 +3550,9 @@ async function garantirDocUsuario() {
     if(!user) return;                  // sem sessão Firebase Auth (login local), nada a fazer
     if(!user.email) return;            // sem email no token, não há como mapear
 
-    const dados = USUARIOS[user.email];
+    const dados = USUARIOS[user.uid];
     if(!dados) {
-      console.warn("[garantirDocUsuario] Email não está em USUARIOS:", user.email);
+      console.warn("[garantirDocUsuario] UID não está em USUARIOS:", user.uid, user.email);
       return;
     }
 
@@ -4140,13 +4105,14 @@ function filtrarPres() {
 async function carregarMetas() {
   try {
     const doc = await db.collection("metas").doc(mesAno).get();
+    // TODO: configurar metas de Angra
     metas = doc.exists ? doc.data() : {
-      meta_caixa_recepcao:120000, meta_credito_recepcao:16000,
-      meta_caixa_callcenter:28000, dias_uteis:22,
-      meta_caixa_equipe:740000, meta_credito_equipe:130000,
-      meta_boleto_equipe:25000, meta_lab_equipe:273000,
-      meta_img_equipe:144000, meta_proc_equipe:227500,
-      meta_injetaveis_equipe:60000
+      meta_caixa_recepcao:0, meta_credito_recepcao:0,
+      meta_caixa_callcenter:0, dias_uteis:22,
+      meta_caixa_equipe:0, meta_credito_equipe:0,
+      meta_boleto_equipe:0, meta_lab_equipe:0,
+      meta_img_equipe:0, meta_proc_equipe:0,
+      meta_injetaveis_equipe:0
     };
     atualizarCards();
     // Re-renderiza premiação da coordenação com meta correta
@@ -4159,18 +4125,20 @@ async function carregarMetas() {
 async function carregarDashMetas(mesAnoAlvo) {
   try {
     const doc = await db.collection("metas").doc(mesAnoAlvo).get();
+    // TODO: configurar metas de Angra
     const base = {
-      meta_caixa_recepcao:      120000,
-      meta_credito_recepcao:     16000,
-      meta_caixa_callcenter:     28000,
-      dias_uteis:                   22,
+      meta_caixa_recepcao:      0,
+      meta_credito_recepcao:    0,
+      meta_caixa_callcenter:    0,
+      dias_uteis:               22,
       ...METAS_EQUIPE_PADRAO,
     };
     dashMetasMes = doc.exists ? { ...base, ...doc.data() } : base;
     console.log("[dash] metas carregadas para", mesAnoAlvo, dashMetasMes);
   } catch(e) {
     console.error("dash metas:", e);
-    dashMetasMes = { ...METAS_EQUIPE_PADRAO, meta_caixa_recepcao:120000, meta_credito_recepcao:16000, meta_caixa_callcenter:28000, dias_uteis:22 };
+    // TODO: configurar metas de Angra
+    dashMetasMes = { ...METAS_EQUIPE_PADRAO, meta_caixa_recepcao:0, meta_credito_recepcao:0, meta_caixa_callcenter:0, dias_uteis:22 };
   }
 }
 
@@ -4281,10 +4249,11 @@ function atualizarCards() {
     const teamTot = historicoEquipeAtual.length > 0
       ? calcTotaisFromHistoricoDocs(historicoEquipeAtual.filter(d => ["recepcionista","lider"].includes(d.perfil)))
       : calcTotaisDetalhados(equipeLancs);
+    // TODO: configurar metas de Angra
     const metasEquipe = {
-      lab:     mm.meta_lab_equipe     || 273000,
-      img:     mm.meta_img_equipe     || 144000,
-      proc:    mm.meta_proc_equipe    || 227500,
+      lab:     mm.meta_lab_equipe     || 0,
+      img:     mm.meta_img_equipe     || 0,
+      proc:    mm.meta_proc_equipe    || 0,
       credito: mm.meta_credito_equipe || METAS_EQUIPE_PADRAO.meta_credito_equipe,
     };
     verificarMarcos(caixa / metaCaixa, caixa, credito, metaCaixa, metaCredito, perfil, teamTot, metasEquipe);
@@ -5315,10 +5284,11 @@ function atualizarCardPremiacao(caixa, credito, metaCaixa, metaCredito, perfil, 
   }
 
   // Recepcionista / Lider: premiação detalhada com pool coletivo
+  // TODO: configurar metas de Angra
   const m          = metas || {};
-  const metaLab    = m.meta_lab_equipe          || 273000;
-  const metaImg    = m.meta_img_equipe          || 144000;
-  const metaProc   = m.meta_proc_equipe         || 227500;
+  const metaLab    = m.meta_lab_equipe          || 0;
+  const metaImg    = m.meta_img_equipe          || 0;
+  const metaProc   = m.meta_proc_equipe         || 0;
   const metaCred   = m.meta_credito_equipe      || METAS_EQUIPE_PADRAO.meta_credito_equipe;
   const diasUteis  = m.dias_uteis               || 22;
   const diasPassF  = diasUteisPassadosFloat();
@@ -5611,12 +5581,13 @@ function renderTabelaPremiacao() {
   }
   const contBoleto = lancMes.filter(l => l.tipo === "entrada" && l.forma_pagamento === "Boleto").length;
 
+  // TODO: configurar metas de Angra
   const m = metas;
   const metaCaixa   = m.meta_caixa_recepcao   || 0;
   const metaCredito = m.meta_credito_recepcao || 0;
-  const metaLab     = m.meta_lab_equipe       || 273000;
-  const metaImg     = m.meta_img_equipe       || 144000;
-  const metaProc    = m.meta_proc_equipe      || 227500;
+  const metaLab     = m.meta_lab_equipe       || 0;
+  const metaImg     = m.meta_img_equipe       || 0;
+  const metaProc    = m.meta_proc_equipe      || 0;
   const metaCred    = m.meta_credito_equipe   || METAS_EQUIPE_PADRAO.meta_credito_equipe;
   const credVig     = mesAno >= MARCO_NOVO_MODELO;
 
@@ -6137,10 +6108,11 @@ function renderCardMetasEquipe() {
     const srcCC  = (usarHist ? historicoEquipeAtual : equipeLancs).filter(d => ["callcenter","lider_callcenter"].includes(d.perfil));
     const totCC  = usarHist ? calcTotaisFromHistoricoDocs(srcCC)  : calcTotaisDetalhados(srcCC);
 
-    const metaLab    = m.meta_lab_equipe          || 273000;
-    const metaImg    = m.meta_img_equipe           || 144000;
-    const metaProc   = m.meta_proc_equipe          || 227500;
-    const metaInj    = m.meta_injetaveis_equipe    || 60000;
+    // TODO: configurar metas de Angra
+    const metaLab    = m.meta_lab_equipe          || 0;
+    const metaImg    = m.meta_img_equipe          || 0;
+    const metaProc   = m.meta_proc_equipe         || 0;
+    const metaInj    = m.meta_injetaveis_equipe   || 0;
     const metaCxMed  = m.meta_caixa_equipe                || METAS_EQUIPE_PADRAO.meta_caixa_equipe;
     const metaCrMed  = m.meta_credito_equipe              || METAS_EQUIPE_PADRAO.meta_credito_equipe;
     const metaBol    = m.meta_boleto_equipe               || METAS_EQUIPE_PADRAO.meta_boleto_equipe;
@@ -6233,10 +6205,11 @@ function renderCardMetasEquipe() {
     const metaCaixa   = m.meta_caixa_equipe        || METAS_EQUIPE_PADRAO.meta_caixa_equipe;
     const metaCredito = m.meta_credito_equipe      || METAS_EQUIPE_PADRAO.meta_credito_equipe;
     const metaBoleto  = m.meta_boleto_equipe       || METAS_EQUIPE_PADRAO.meta_boleto_equipe;
-    const metaLab     = m.meta_lab_equipe          || 273000;
-    const metaImg     = m.meta_img_equipe          || 144000;
-    const metaProc    = m.meta_proc_equipe         || 227500;
-    const metaInj     = m.meta_injetaveis_equipe   || 60000;
+    // TODO: configurar metas de Angra
+    const metaLab     = m.meta_lab_equipe          || 0;
+    const metaImg     = m.meta_img_equipe          || 0;
+    const metaProc    = m.meta_proc_equipe         || 0;
+    const metaInj     = m.meta_injetaveis_equipe   || 0;
 
     // Pool de Crédito vigente apenas a partir do marco (Maio/2026).
     const credVig  = mesAno >= MARCO_NOVO_MODELO;
@@ -7862,14 +7835,15 @@ function renderDashPremiacao() {
 
   const verCC = SO_DASHBOARD.includes(usuario?.perfil);
 
+  // TODO: configurar metas de Angra
   const m          = dashMetasMes || {};
-  const metaRec    = m.meta_caixa_recepcao   || 120000;
-  const metaCred   = m.meta_credito_recepcao  || 16000;
-  const metaCC     = m.meta_caixa_callcenter  || 28000;
-  const metaLab    = m.meta_lab_equipe        || 273000;
-  const metaImg    = m.meta_img_equipe        || 144000;
-  const metaProc   = m.meta_proc_equipe       || 227500;
-  const metaCredEq = m.meta_credito_equipe    || METAS_EQUIPE_PADRAO.meta_credito_equipe;
+  const metaRec    = m.meta_caixa_recepcao   || 0;
+  const metaCred   = m.meta_credito_recepcao || 0;
+  const metaCC     = m.meta_caixa_callcenter || 0;
+  const metaLab    = m.meta_lab_equipe       || 0;
+  const metaImg    = m.meta_img_equipe       || 0;
+  const metaProc   = m.meta_proc_equipe      || 0;
+  const metaCredEq = m.meta_credito_equipe   || METAS_EQUIPE_PADRAO.meta_credito_equipe;
   const metaEquipeCC = m.meta_caixa_callcenter_equipe || METAS_EQUIPE_PADRAO.meta_caixa_callcenter_equipe;
   const diasUteis  = m.dias_uteis || 22;
   const diasPassF  = diasUteisPassadosFloat();
@@ -11813,7 +11787,7 @@ let _relLancamentosBuscados = [];   // último resultado da busca (pra exportar)
 // Áreas por perfil — define quem aparece no filtro "Recepcionista" e quais
 // docs entram na busca para perfis com escopo restrito (líderes).
 const PERFIS_RECEPCAO   = ["recepcionista","lider"];
-const PERFIS_CALLCENTER = ["callcenter","lider_callcenter","coordenadora"];
+const PERFIS_CALLCENTER = ["coordenador","coordenadora"];
 
 // Inicializa a tela (idempotente — só roda 1× por sessão)
 function iniciarRelatorios() {

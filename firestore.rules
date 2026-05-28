@@ -3,25 +3,25 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Lançamentos: cada usuária só lê e escreve os próprios
-    // Gestora, subgestora, coordenadora, líderes e financeiro lêem todos (dashboards/relatórios)
-    // - financeiro (Thifani, Leila): leitura ampla, sem permissão de criação/edição/exclusão
+    // Gestora, subgestora, coordenação, líderes e financeiro lêem todos (dashboards/relatórios)
+    // - financeiro: leitura ampla, sem permissão de criação/edição/exclusão
     match /lancamentos/{docId} {
       allow read: if request.auth != null &&
         (resource.data.usuario_id == request.auth.uid ||
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['gestor', 'subgestora', 'lider', 'coordenadora', 'recepcionista', 'callcenter', 'lider_callcenter', 'financeiro']);
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['gestor', 'subgestora', 'lider', 'coordenador', 'coordenadora', 'recepcionista', 'financeiro']);
       allow create: if request.auth != null &&
         request.resource.data.usuario_id == request.auth.uid &&
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil != 'financeiro';
-      // Update: dono do doc OU operadores do kanban (recep/callcenter mudam status
+      // Update: dono do doc OU operadores do kanban (recep muda status
       // link_enviado→pago/recusado) OU liderança/gestão (correções).
       // Financeiro excluído propositalmente (read-only por design).
       allow update: if request.auth != null && (
         resource.data.usuario_id == request.auth.uid ||
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in [
           'gestor', 'subgestor', 'subgestora',
-          'lider', 'lider_callcenter',
+          'lider',
           'coordenadora', 'coordenador',
-          'recepcionista', 'callcenter'
+          'recepcionista'
         ]
       );
       allow delete: if request.auth != null &&
@@ -95,7 +95,7 @@ service cloud.firestore {
 
     // Orçamentos (Fase 1): todos os perfis autenticados leem (filtro de visibilidade
     // é aplicado no cliente). Criação só com criado_por_uid == auth.uid.
-    // Edição/exclusão pelo dono ou pela liderança (lider, lider_callcenter, gestor, subgestora).
+    // Edição/exclusão pelo dono ou pela liderança (lider, coordenação, gestor, subgestora).
     // Status pode ser alterado por qualquer usuária autenticada (regra simplificada para Fase 1).
     match /orcamentos/{docId} {
       allow read:   if request.auth != null;
@@ -103,17 +103,17 @@ service cloud.firestore {
         request.resource.data.criado_por_uid == request.auth.uid;
       allow update, delete: if request.auth != null &&
         (resource.data.criado_por_uid == request.auth.uid ||
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['gestor', 'subgestora', 'lider', 'lider_callcenter']);
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['gestor', 'subgestora', 'lider', 'coordenador', 'coordenadora']);
     }
 
     // Config de backup: metadata do último backup completo (data, usuário, totais).
     // Doc id = "ultimo". Acesso restrito a perfis que podem operar o backup
-    // (mesma lista do botão na UI — VE_BACKUP). Recepcionista/callcenter excluídos.
+    // (mesma lista do botão na UI — VE_BACKUP). Recepcionista excluída.
     match /config_backup/{docId} {
       allow read, write: if request.auth != null &&
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in [
           'gestor', 'subgestor', 'subgestora',
-          'lider', 'lider_callcenter',
+          'lider',
           'coordenadora', 'coordenador',
           'financeiro'
         ];

@@ -1,4 +1,4 @@
-# Instruções — Amor Saúde Metas
+# Instruções — Amor Saúde Metas (Angra dos Reis)
 
 ---
 
@@ -6,7 +6,7 @@
 
 1. Acesse https://console.firebase.google.com
 2. Clique em **"Adicionar projeto"**
-3. Nome: `amorsaude-metas` → Próximo → desative Google Analytics (opcional) → **Criar projeto**
+3. Nome: `amorsaude-angra` → Próximo → desative Google Analytics (opcional) → **Criar projeto**
 4. No menu lateral, clique em **Firestore Database** → **Criar banco de dados**
    - Escolha **"Iniciar no modo de teste"** (permite leitura/gravação por 30 dias — depois configure as regras)
    - Região: `southamerica-east1` (São Paulo) → **Ativar**
@@ -22,9 +22,9 @@
    ```js
    const firebaseConfig = {
      apiKey: "AIzaSy...",
-     authDomain: "amorsaude-metas.firebaseapp.com",
-     projectId: "amorsaude-metas",
-     storageBucket: "amorsaude-metas.appspot.com",
+     authDomain: "amorsaude-angra.firebaseapp.com",
+     projectId: "amorsaude-angra",
+     storageBucket: "amorsaude-angra.appspot.com",
      messagingSenderId: "123456789",
      appId: "1:123456789:web:abc123"
    };
@@ -88,7 +88,7 @@ O índice necessário é:
 
 2. **Crie um repositório novo**:
    - Clique em **"New repository"**
-   - Nome: `amorsaude-metas`
+   - Nome: `amorsaude-metas` (no org `amorsaude-angra`)
    - Deixe como **Public**
    - Clique em **"Create repository"**
 
@@ -113,19 +113,16 @@ O índice necessário é:
 
 ## 7. Testando o sistema
 
-| Usuária  | Perfil        | Senha     |
-|----------|---------------|-----------|
-| Eduarda  | Gestora       | amor2026  |
-| Dara     | Líder         | amor2026  |
-| Bianca   | Líder         | amor2026  |
-| Dawilla  | Recepcionista | amor2026  |
-| Suélen   | Recepcionista | amor2026  |
-| Graziele | Recepcionista | amor2026  |
-| Thamyres | Recepcionista | amor2026  |
-| Tuane    | Recepcionista | amor2026  |
-| Raiane   | Recepcionista | amor2026  |
-| Erielly  | Call Center   | amor2026  |
-| Júlia    | Call Center   | amor2026  |
+| Usuária             | Perfil        | Senha       |
+|---------------------|---------------|-------------|
+| Laudenir            | Gestor        | Angra2026@  |
+| Karoane             | Sub-Gestora   | Angra2026@  |
+| Eduarda             | Sub-Gestora   | Angra2026@  |
+| Gabriel             | Coordenador   | Angra2026@  |
+| Yasmin Oliveira     | Recepcionista | Angra2026@  |
+| Yasmin Pimentel     | Recepcionista | Angra2026@  |
+| Gabriela Cardoso    | Recepcionista | Angra2026@  |
+| Leticia Eleoterio   | Recepcionista | Angra2026@  |
 
 ---
 
