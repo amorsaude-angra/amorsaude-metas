@@ -735,31 +735,17 @@
         <option value="" disabled selected>— escolha —</option>
         <optgroup label="Gestão">
           <option value="Laudenir">Laudenir</option>
+          <option value="Karoane">Karoane</option>
           <option value="Eduarda">Eduarda</option>
         </optgroup>
-        <optgroup label="Coordenação">
-          <option value="Paola">Paola</option>
-          <option value="Andrielli">Andrielli</option>
-        </optgroup>
-        <optgroup label="Líderes">
-          <option value="Dara">Dara</option>
-          <option value="Bianca">Bianca</option>
+        <optgroup label="Coordenador">
+          <option value="Gabriel">Gabriel</option>
         </optgroup>
         <optgroup label="Recepção">
-          <option value="Dawilla">Dawilla</option>
-          <option value="Suélen">Suélen</option>
-          <option value="Graziele">Graziele</option>
-          <option value="Tuane" style="color:#9CA3AF;font-style:italic">Tuane (afastada)</option>
-          <option value="Raiane">Raiane</option>
-          <option value="Leticia">Leticia</option>
-        </optgroup>
-        <optgroup label="Call Center">
-          <option value="Erielly">Erielly</option>
-          <option value="Júlia">Júlia</option>
-        </optgroup>
-        <optgroup label="Financeiro">
-          <option value="Thifani">Thifani</option>
-          <option value="Leila">Leila</option>
+          <option value="Yasmin Oliveira">Yasmin Oliveira</option>
+          <option value="Yasmin Pimentel">Yasmin Pimentel</option>
+          <option value="Gabriela Cardoso">Gabriela Cardoso</option>
+          <option value="Leticia Eleoterio">Leticia Eleoterio</option>
         </optgroup>
       </select>
     </div>
@@ -830,13 +816,8 @@
     <button class="lider-tab"        id="cc-tab-equipe" onclick="mudarAbaCC('equipe')">📊 Metas Equipe</button>
   </div>
 
-  <!-- Navegação por abas — líder de call center (Andrielli) + Relatórios -->
-  <div id="lider-cc-nav">
-    <button class="lider-tab active" id="lider-cc-tab-lanc" onclick="mudarAbaLiderCC('lancamentos')">📝 Orçamento</button>
-    <button class="lider-tab"        id="lider-cc-tab-orc"  onclick="mudarAbaLiderCC('orcamentos')">📋 Acompanhamento</button>
-    <button class="lider-tab"        id="lider-cc-tab-cc"   onclick="mudarAbaLiderCC('callcenter')">📊 Call Center</button>
-    <button class="lider-tab"        id="lider-cc-tab-rel"  onclick="mudarAbaLiderCC('relatorios')">📊 Relatórios</button>
-  </div>
+  <!-- TODO: validar comportamento em Angra — perfil lider_callcenter não existe localmente -->
+  <div id="lider-cc-nav"></div>
 
   <!-- Navegação por abas — gestora/subgestora (Dashboard | Orçamentos | Relatórios) -->
   <div id="gestor-nav">
@@ -845,15 +826,12 @@
     <button class="lider-tab"        id="gestor-tab-rel"  onclick="mudarAbaGestor('relatorios')">📊 Relatórios</button>
   </div>
 
-  <!-- Navegação por abas — financeiro (Thifani, Leila): SÓ Relatórios -->
-  <div id="fin-nav">
-    <button class="lider-tab active" id="fin-tab-rel" onclick="mudarAbaFinanceiro('relatorios')">📊 Relatórios</button>
-  </div>
+  <!-- TODO: validar comportamento em Angra — perfil financeiro não existe localmente -->
+  <div id="fin-nav"></div>
 
-  <!-- Navegação por abas — coordenadora pura (Paola): Call Center | Relatórios -->
+  <!-- TODO: validar comportamento em Angra — coordenadora pura (sem aba Call Center) -->
   <div id="coord-nav">
-    <button class="lider-tab active" id="coord-tab-cc"  onclick="mudarAbaCoord('callcenter')">📊 Call Center</button>
-    <button class="lider-tab"        id="coord-tab-rel" onclick="mudarAbaCoord('relatorios')">📊 Relatórios</button>
+    <button class="lider-tab active" id="coord-tab-rel" onclick="mudarAbaCoord('relatorios')">📊 Relatórios</button>
   </div>
 
   <div id="app">
@@ -1006,14 +984,8 @@
         <!-- Card 1: Premiação Liderança (todas as coordenadoras) -->
         <div id="coord-card-prem-lider" style="margin-bottom:20px"></div>
 
-        <!-- Card 2: Premiação Coordenação (só Paola) -->
+        <!-- TODO: validar comportamento em Angra — card de Premiação Coordenação removido (sem coordenadora pura) -->
         <div id="coord-card-prem-coord" style="display:none;margin-bottom:20px"></div>
-
-        <!-- Ranking -->
-        <div class="card" style="margin-bottom:20px">
-          <div class="card-title">🏆 Ranking — Call Center</div>
-          <div id="coord-ranking"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
-        </div>
 
         <!-- Premiações -->
         <div class="card" style="margin-bottom:20px">
@@ -1040,40 +1012,8 @@
 
       </div><!-- fim coord-painel-normal -->
 
-      <!-- Painel comparativo -->
-      <div id="coord-painel-comp" style="display:none">
-
-        <div class="card" style="margin-bottom:20px">
-          <div class="card-title">📊 Comparativo de Períodos — Call Center</div>
-
-          <!-- Sub-abas -->
-          <div style="display:flex;gap:4px;background:#F3F4F6;border-radius:var(--r2);padding:4px;margin-bottom:20px;flex-wrap:wrap">
-            <button class="pres-tab active" id="coord-comp-tab-du"  onclick="mudarSubCompCC('dias_uteis')">📅 Dias Úteis</button>
-            <button class="pres-tab"        id="coord-comp-tab-ds"  onclick="mudarSubCompCC('dia_semana')">📆 Dia da Semana</button>
-            <button class="pres-tab"        id="coord-comp-tab-sem" onclick="mudarSubCompCC('semanas')">🗓️ Semanas</button>
-          </div>
-
-          <!-- Seletores de período -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-            <div>
-              <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block">Período A</label>
-              <input type="month" id="coord-comp-mes-a"
-                style="padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r2);font-family:'Inter',sans-serif;font-size:14px;outline:none;color:var(--text);width:100%" />
-            </div>
-            <div>
-              <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block">Período B</label>
-              <input type="month" id="coord-comp-mes-b"
-                style="padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r2);font-family:'Inter',sans-serif;font-size:14px;outline:none;color:var(--text);width:100%" />
-            </div>
-          </div>
-
-          <div id="coord-comp-ctrl-sub" style="margin-bottom:16px"></div>
-          <button class="btn btn-primary" onclick="executarComparativoCC()" style="width:auto">📊 Comparar</button>
-        </div>
-
-        <div id="coord-comp-resultado"></div>
-
-      </div><!-- fim coord-painel-comp -->
+      <!-- TODO: validar comportamento em Angra — Comparativo de Períodos removido (Call Center não opera) -->
+      <div id="coord-painel-comp" style="display:none"></div>
 
     </div>
 
@@ -2203,11 +2143,7 @@
         <label>Meta de Crédito — Recepção (R$)</label>
         <input type="text" id="mm-credito-recepcao" placeholder="0,00" oninput="mascaraValor(this)" />
       </div>
-      <div class="modal-sec-label">Call Center</div>
-      <div class="fg">
-        <label>Meta de Caixa — Call Center (R$)</label>
-        <input type="text" id="mm-caixa-callcenter" placeholder="0,00" oninput="mascaraValor(this)" />
-      </div>
+      <!-- TODO: validar comportamento em Angra — campo Call Center removido do modal -->
       <div class="modal-sec-label">Exames &amp; Procedimentos</div>
       <div class="fg">
         <label>Meta Exames Laboratoriais (R$)</label>
@@ -2432,7 +2368,7 @@ function emailPorNome(nome) {
   return u?.email || null;
 }
 
-// Status de colaboradora: "afastada" (Tuane) bloqueia login mas mantém histórico.
+// Status de colaboradora: "afastada" bloqueia login mas mantém histórico.
 // "desligada" não fica em USUARIOS — sai de todas as listagens individuais.
 function statusPorNome(nome) {
   const u = Object.values(USUARIOS).find(x => x.nome === nome);
@@ -2448,9 +2384,9 @@ const PERFIL_LABEL = {
   financeiro:"Financeiro"
 };
 
-// Atendentes de Call Center supervisionadas pela coordenadora
-const CC_MEMBROS = ["Erielly","Júlia"];
-const CC_TODOS   = ["Erielly","Júlia"];
+// TODO: validar comportamento em Angra — Angra não opera Call Center
+const CC_MEMBROS = [];
+const CC_TODOS   = [];
 // TODO: configurar metas de Angra
 // Meta fixa de caixa por atendente CC (usada na coordenadora quando não há meta configurada)
 const META_CC_PADRAO = 0;
@@ -2782,8 +2718,9 @@ function podeMarcarRecusa()   { return mesAno >= MARCO_NOVO_MODELO; }
 const VE_COORD = ["coordenador","coordenadora"];
 
 // Premiação coletiva (pool) para Lab, Imagem, Procedimentos e Crédito
-const POOL_REC_EXCLUIDOS = ["Tuane", "Thamyres"];  // não participam do pool
-const POOL_REC_QTD       = 5;                       // recepcionistas no pool (excl. Tuane e Thamyres)
+// TODO: validar comportamento em Angra — configurar exclusões/quantidade do pool conforme equipe local
+const POOL_REC_EXCLUIDOS = [];  // recepcionistas excluídas do pool
+const POOL_REC_QTD       = 0;   // recepcionistas no pool
 const FAIXAS_POOL_LAB    = [{pct:1.0,pool:1500},{pct:0.9,pool:1125},{pct:0.8,pool:500}];
 const FAIXAS_POOL_IMG    = [{pct:1.0,pool:500}, {pct:0.9,pool:375}, {pct:0.8,pool:250}];
 const FAIXAS_POOL_PROC   = [{pct:1.0,pool:500}, {pct:0.9,pool:375}, {pct:0.8,pool:250}];
@@ -3338,6 +3275,7 @@ function calcPartePool(nome, pool) {
   const perfil = PERFIS[nome] || "";
   if(perfil === "lider") return pool * 0.30;
   if(POOL_REC_EXCLUIDOS.includes(nome)) return 0;
+  if(POOL_REC_QTD <= 0) return 0; // TODO: configurar POOL_REC_QTD em Angra
   return (pool * 0.40) / POOL_REC_QTD;
 }
 
@@ -3616,8 +3554,7 @@ function iniciarApp() {
   const ehLiderCC    = perfil === "lider_callcenter";
   const ehCoord      = VE_COORD.includes(perfil);
   const ehFinanceiro = SO_RELATORIOS.includes(perfil);
-  // Coordenadora "pura" (Paola) — sem nav de líder CC. Ganha nav próprio
-  // (Call Center | Relatórios). Andrielli (lider_callcenter) continua no nav dela.
+  // TODO: validar comportamento em Angra — coordenadora pura (sem Call Center)
   const ehCoordPura  = perfil === "coordenadora";
 
   fecharBanner();
@@ -3625,7 +3562,7 @@ function iniciarApp() {
   const ehRec = perfil === "recepcionista";
   const ehCC  = perfil === "callcenter";
 
-  // Barra de abas — líder de recepção (Dara, Bianca): 5 abas + Relatórios
+  // Barra de abas — líder de recepção: 5 abas + Relatórios
   document.getElementById("lider-nav").classList.toggle("show", ehLider);
   if(ehLider) {
     const saved = localStorage.getItem("as_aba_lider");
@@ -3649,7 +3586,7 @@ function iniciarApp() {
     aplicarAbaCC();
   }
 
-  // Barra de abas — líder de call center (Andrielli): 3 abas + Relatórios
+  // Barra de abas — líder de call center: 3 abas + Relatórios
   document.getElementById("lider-cc-nav").classList.toggle("show", ehLiderCC);
   if(ehLiderCC) {
     const saved = localStorage.getItem("as_aba_lider_cc");
@@ -3666,7 +3603,7 @@ function iniciarApp() {
     aplicarAbaGestor();
   }
 
-  // Barra de abas — coordenadora pura (Paola): Call Center | Relatórios
+  // Barra de abas — coordenadora pura: Relatórios
   document.getElementById("coord-nav").classList.toggle("show", ehCoordPura);
   if(ehCoordPura) {
     const saved = localStorage.getItem("as_aba_coord");
@@ -3674,7 +3611,7 @@ function iniciarApp() {
     aplicarAbaCoord();
   }
 
-  // Barra de abas — financeiro (Thifani, Leila): só Relatórios
+  // Barra de abas — financeiro: só Relatórios
   document.getElementById("fin-nav").classList.toggle("show", ehFinanceiro);
   if(ehFinanceiro) {
     // Esconde TODAS as outras seções; deixa só Relatórios.
@@ -4011,7 +3948,7 @@ function aplicarAbaLiderCC() {
   document.getElementById("sec-lanc").style.display        = emLanc ? "" : "none";
   document.getElementById("sec-tabela").style.display      = emLanc ? "" : "none";
   document.getElementById("sec-historico").style.display   = emLanc ? "" : "none";
-  // Aba Call Center: visão da coordenadora (dados de Erielly e Júlia)
+  // Aba Call Center: visão da coordenadora
   document.getElementById("sec-coord").style.display       = emCC   ? "" : "none";
   document.getElementById("sec-orcamentos").style.display  = emOrc  ? "" : "none";
   document.getElementById("sec-relatorios").style.display  = emRel  ? "" : "none";
@@ -4053,16 +3990,14 @@ function mudarAbaGestor(aba) {
   aplicarAbaGestor();
 }
 
-// ── Coordenadora (Paola): Call Center | Relatórios
-let abaCoord = "callcenter";
+// TODO: validar comportamento em Angra — coordenadora pura (sem Call Center)
+let abaCoord = "relatorios";
 function aplicarAbaCoord() {
-  const emCC  = abaCoord === "callcenter";
   const emRel = abaCoord === "relatorios";
 
-  document.getElementById("coord-tab-cc").classList.toggle("active",  emCC);
-  document.getElementById("coord-tab-rel").classList.toggle("active", emRel);
+  document.getElementById("coord-tab-rel")?.classList.toggle("active", emRel);
 
-  document.getElementById("sec-coord").style.display      = emCC  ? "" : "none";
+  document.getElementById("sec-coord").style.display      = "none";
   document.getElementById("sec-relatorios").style.display = emRel ? "" : "none";
 
   if(emRel) iniciarRelatorios();
@@ -4073,10 +4008,9 @@ function mudarAbaCoord(aba) {
   aplicarAbaCoord();
 }
 
-// ── Financeiro (Thifani, Leila): SÓ Relatórios
+// TODO: validar comportamento em Angra — perfil financeiro não existe localmente
 function mudarAbaFinanceiro(/* aba */) {
-  // Só há uma aba — garante visibilidade
-  document.getElementById("fin-tab-rel").classList.add("active");
+  document.getElementById("fin-tab-rel")?.classList.add("active");
   document.getElementById("sec-relatorios").style.display = "";
   iniciarRelatorios();
 }
@@ -5598,7 +5532,7 @@ function renderTabelaPremiacao() {
 
   const blocos = [];
   if(perfil === "recepcionista") {
-    const fracao = 0.40 / POOL_REC_QTD;
+    const fracao = POOL_REC_QTD > 0 ? 0.40 / POOL_REC_QTD : 0; // TODO: configurar POOL_REC_QTD em Angra
     blocos.push(_tabPremBlocoCaixa(caixa, metaCaixa));
     blocos.push(_tabPremBlocoBonus(caixa, credito, metaCaixa, metaCredito));
     blocos.push(_tabPremBlocoBoleto(contBoleto));
@@ -6005,7 +5939,8 @@ let coordDataDia = "";
 let coordSemanaRef = "";
 
 // Cores por membro CC
-const CC_CORES = { "Erielly":"#E8003D", "Júlia":"#7C3AED", "Andrielli":"#059669" };
+// TODO: validar comportamento em Angra — Angra não opera Call Center
+const CC_CORES = {};
 
 function iniciarCoord() {
   const hoje = new Date();
@@ -6097,7 +6032,7 @@ function renderCardMetasEquipe() {
   const ehCCPuro = perfil === "callcenter";
 
   if(ehCCPuro) {
-    // ── CC puro (Erielly / Júlia): vê medicina SEM premiações + CC com ranking ──
+    // ── CC puro: vê medicina SEM premiações + CC com ranking ──
 
     // Separa por grupo (historico ou lancamentos)
     // Medicina: a partir do marco usa equipeLancs (filtrando recep/líder); antes do marco usa fatDiario.
@@ -6321,23 +6256,9 @@ function renderCoord() {
   renderCoordPrescritores(filtrado);
 }
 
-// Faixas de premiação — coordenação (Paola): % aplicado sobre meta total
-const FAIXAS_COORD_CC = [
-  { limiar: 1.50, label: "150% da meta", pct: "0,60%", prem: 504 },
-  { limiar: 1.25, label: "125% da meta", pct: "0,55%", prem: 385 },
-  { limiar: 1.00, label: "100% — Meta", pct: "0,50%", prem: 280 },
-  { limiar: 0.90, label: "90% da meta",  pct: "0,35%", prem: 196 },
-  { limiar: 0.80, label: "80% da meta",  pct: "0,30%", prem: 168 },
-];
-
-// Faixas de premiação — liderança CC (Paola + Andrielli)
-const FAIXAS_LIDER_CC = [
-  { limiar: 1.50, label: "150% da meta", pct: "0,35%", prem: 294 },
-  { limiar: 1.25, label: "125% da meta", pct: "0,30%", prem: 252 },
-  { limiar: 1.00, label: "100% — Meta",  pct: "0,25%", prem: 210 },
-  { limiar: 0.90, label: "90% da meta",  pct: "0,20%", prem: 168 },
-  { limiar: 0.80, label: "80% da meta",  pct: "0,15%", prem: 126 },
-];
+// TODO: validar comportamento em Angra — sem faixas de premiação CC enquanto não houver equipe
+const FAIXAS_COORD_CC = [];
+const FAIXAS_LIDER_CC = [];
 
 // Retorna { atual, prox } para um pct sobre a meta (faixas em ordem decrescente de limiar)
 function calcFaixaCC(faixas, pct) {
@@ -6445,16 +6366,10 @@ function renderCoordPremiacaoGestao() {
     );
   }
 
-  // Card 2 — Coordenação (somente Paola)
+  // TODO: configurar coordenador em Angra se aplicável
   const elCoord = document.getElementById("coord-card-prem-coord");
   if(elCoord) {
-    const ehPaola = usuario?.email === "paola7ccristino@gmail.com";
-    elCoord.style.display = ehPaola ? "" : "none";
-    if(ehPaola) {
-      elCoord.innerHTML = buildCardPremGestao(
-        "🏆 Premiação Coordenação", FAIXAS_COORD_CC, totalCaixa, metaEquipe, "var(--primary)"
-      );
-    }
+    elCoord.style.display = "none";
   }
 }
 
@@ -8056,10 +7971,6 @@ function renderDashPremiacao() {
             ${linhasRec.map(rowRec).join("")}
             <tr class="prem-grupo-sep"><td colspan="10">📞 Grupo 2 — Call Center Individual</td></tr>
             ${linhasCC.map(rowCC).join("")}
-            <tr class="prem-grupo-sep"><td colspan="10">🏅 Grupo 3 — Liderança CC (Andrielli) · Meta equipe CC: ${brl(metaEquipeCC)}</td></tr>
-            ${rowLid("Andrielli","lider_callcenter",totalCaixaCC,metaEquipeCC,premLider,premLiderProj,faixaLiderLabel,fLiderProjLabel)}
-            <tr class="prem-grupo-sep"><td colspan="10">🏆 Grupo 4 — Coordenação CC (Paola) · Meta equipe CC: ${brl(metaEquipeCC)}</td></tr>
-            ${rowLid("Paola","coordenadora",totalCaixaCC,metaEquipeCC,premCoord,premCoordProj,faixaCoordLabel,fCoordProjLabel)}
           </tbody>
           <tfoot><tr><td colspan="8">Total Geral</td><td class="num">${brl(totalGeral)}</td><td class="num">${brl(totalProj)}</td></tr></tfoot>
         </table>
