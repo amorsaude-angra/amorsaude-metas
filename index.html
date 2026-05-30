@@ -2305,13 +2305,6 @@ const PERFIL_LABEL = {
   financeiro:"Financeiro"
 };
 
-// Angra não opera Call Center
-const CC_MEMBROS = [];
-const CC_TODOS   = [];
-// TODO: configurar metas de Angra
-// Meta fixa de caixa por atendente CC (usada na coordenadora quando não há meta configurada)
-const META_CC_PADRAO = 0;
-
 // TODO: configurar metas de Angra
 // Metas padrão da EQUIPE — valores independentes, NÃO são soma das metas individuais
 const METAS_EQUIPE_PADRAO = {
@@ -2322,7 +2315,6 @@ const METAS_EQUIPE_PADRAO = {
   meta_img_equipe:                0,
   meta_proc_equipe:               0,
   meta_injetaveis_equipe:         0,
-  meta_caixa_callcenter_equipe:   0,
 };
 
 // Perfis que têm meta de crédito
@@ -3813,7 +3805,7 @@ async function carregarMetas() {
     // TODO: configurar metas de Angra
     metas = doc.exists ? doc.data() : {
       meta_caixa_recepcao:0, meta_credito_recepcao:0,
-      meta_caixa_callcenter:0, dias_uteis:22,
+      dias_uteis:22,
       meta_caixa_equipe:0, meta_credito_equipe:0,
       meta_boleto_equipe:0, meta_lab_equipe:0,
       meta_img_equipe:0, meta_proc_equipe:0,
@@ -3832,7 +3824,6 @@ async function carregarDashMetas(mesAnoAlvo) {
     const base = {
       meta_caixa_recepcao:      0,
       meta_credito_recepcao:    0,
-      meta_caixa_callcenter:    0,
       dias_uteis:               22,
       ...METAS_EQUIPE_PADRAO,
     };
@@ -3841,7 +3832,7 @@ async function carregarDashMetas(mesAnoAlvo) {
   } catch(e) {
     console.error("dash metas:", e);
     // TODO: configurar metas de Angra
-    dashMetasMes = { ...METAS_EQUIPE_PADRAO, meta_caixa_recepcao:0, meta_credito_recepcao:0, meta_caixa_callcenter:0, dias_uteis:22 };
+    dashMetasMes = { ...METAS_EQUIPE_PADRAO, meta_caixa_recepcao:0, meta_credito_recepcao:0, dias_uteis:22 };
   }
 }
 
@@ -8094,7 +8085,6 @@ function abrirModalMetas() {
   set("mm-dias-uteis",       m.dias_uteis            || 22);
   set("mm-caixa-recepcao",   m.meta_caixa_recepcao   || 0);
   set("mm-credito-recepcao", m.meta_credito_recepcao || 0);
-  set("mm-caixa-callcenter", m.meta_caixa_callcenter || 0);
   set("mm-lab",              m.meta_lab_equipe        || 0);
   set("mm-img",              m.meta_img_equipe        || 0);
   set("mm-proc",             m.meta_proc_equipe       || 0);
@@ -8118,7 +8108,6 @@ async function salvarModalMetas() {
     dias_uteis:            getN("mm-dias-uteis"),
     meta_caixa_recepcao:   get("mm-caixa-recepcao"),
     meta_credito_recepcao: get("mm-credito-recepcao"),
-    meta_caixa_callcenter: get("mm-caixa-callcenter"),
     meta_lab_equipe:            get("mm-lab"),
     meta_img_equipe:            get("mm-img"),
     meta_proc_equipe:           get("mm-proc"),
@@ -8725,7 +8714,6 @@ function escHTML(s) {
 function prepararFormOrcamento() {
   if(!usuario) return;
 
-  // ID do Caso oculto (Angra não usa Call Center)
   const wrapId = document.getElementById("orc-id-caso-wrap");
   if(wrapId) wrapId.style.display = "none";
 
