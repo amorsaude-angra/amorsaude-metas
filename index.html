@@ -816,7 +816,6 @@
     <button class="lider-tab"        id="cc-tab-equipe" onclick="mudarAbaCC('equipe')">📊 Metas Equipe</button>
   </div>
 
-  <!-- TODO: validar comportamento em Angra — perfil lider_callcenter não existe localmente -->
   <div id="lider-cc-nav"></div>
 
   <!-- Navegação por abas — gestora/subgestora (Dashboard | Orçamentos | Relatórios) -->
@@ -3137,8 +3136,7 @@ function calcPremiacao(caixa, credito, perfil, metaCaixa, metaCredito) {
   if(metaCaixa <= 0) return { valor:0, faixa:"Meta não definida", proxFaixa:null, faltaProx:0 };
   const pct = caixa / metaCaixa;
 
-  // lider_callcenter usa as mesmas faixas de premiação do callcenter
-  if(perfil === "callcenter" || perfil === "lider_callcenter") {
+  if(perfil === "callcenter") {
     if(pct >= 1.50) return { valor:709.80, faixa:"150% da meta 🏆",  proxFaixa:null,    faltaProx:0 };
     if(pct >= 1.25) return { valor:465.50, faixa:"125% da meta 🔥",  proxFaixa:"150%",  faltaProx:metaCaixa*1.5-caixa };
     if(pct >= 1.00) return { valor:280,    faixa:"100% da meta ✅",  proxFaixa:"125%",  faltaProx:metaCaixa*1.25-caixa };
@@ -3483,7 +3481,6 @@ function iniciarApp() {
   const temLanc      = FAZ_LANC.includes(perfil);
   const temDashboard = VE_DASHBOARD.includes(perfil);
   const ehLider      = perfil === "lider";
-  const ehLiderCC    = perfil === "lider_callcenter";
   const ehCoord      = VE_COORD.includes(perfil);
   const ehFinanceiro = SO_RELATORIOS.includes(perfil);
   // TODO: validar comportamento em Angra — coordenadora pura (sem Call Center)
@@ -3516,14 +3513,6 @@ function iniciarApp() {
     const saved = localStorage.getItem("as_aba_cc");
     abaCC = ["lancamentos","metas","equipe","orcamentos"].includes(saved) ? saved : "metas";
     aplicarAbaCC();
-  }
-
-  // Barra de abas — líder de call center: 3 abas + Relatórios
-  document.getElementById("lider-cc-nav").classList.toggle("show", ehLiderCC);
-  if(ehLiderCC) {
-    const saved = localStorage.getItem("as_aba_lider_cc");
-    abaLiderCC = ["callcenter","lancamentos","orcamentos","relatorios"].includes(saved) ? saved : "lancamentos";
-    aplicarAbaLiderCC();
   }
 
   // Barra de abas — gestora/subgestora: Dashboard | Orçamentos | Relatórios
@@ -3569,12 +3558,12 @@ function iniciarApp() {
   // Card equipe — visível para quem faz lançamento (exceto gestor/subgestora)
   // Para perfis com abas próprias, a visibilidade é controlada por aplicarAbaXxx()
   const verEquipe = (temLanc || ehCoord) && !SO_DASHBOARD.includes(perfil);
-  if(!ehLider && !ehLiderCC && !ehRec && !ehCC) {
+  if(!ehLider && !ehRec && !ehCC) {
     document.getElementById("sec-card-equipe").style.display = verEquipe ? "" : "none";
   }
 
   // Seções de lançamento — para perfis com abas, controlado por aplicarAbaXxx()
-  if(!ehLider && !ehLiderCC && !ehRec && !ehCC) {
+  if(!ehLider && !ehRec && !ehCC) {
     document.getElementById("sec-metas").style.display     = temLanc ? "" : "none";
     document.getElementById("sec-resumo").style.display    = temLanc ? "" : "none";
     document.getElementById("sec-lanc").style.display      = temLanc ? "" : "none";
@@ -3622,7 +3611,7 @@ function iniciarApp() {
   if(temLanc)      iniciarListener();
   // Rec/CC: inicia equipe imediatamente (pool calc necessário para aba Metas)
   // Lider e liderCC: listener iniciado por aplicarAbaLider/CC quando sai do dashboard
-  if(verEquipe && !ehLider && !ehLiderCC) iniciarListenerEquipe();
+  if(verEquipe && !ehLider) iniciarListenerEquipe();
   // Faturamento diário: carrega para gestora, subgestora e líderes
   if(temDashboard) carregarFaturamentoDiario();
 
@@ -3681,7 +3670,6 @@ async function tickAutoRefresh() {
   try {
     const perfil = usuario.perfil;
     const ehLider   = perfil === "lider";
-    const ehLiderCC = perfil === "lider_callcenter";
     const ehRec     = perfil === "recepcionista";
     const ehCC      = perfil === "callcenter";
     const temDash   = VE_DASHBOARD.includes(perfil);
@@ -3711,15 +3699,6 @@ async function tickAutoRefresh() {
         else if(abaLider === "metas") atualizarCards();
         else if(abaLider === "orcamentos") renderKanbanOrcamentos();
       } catch(e) { console.warn("[autoRefresh] lider:", e); }
-    }
-
-    // 3) Líder de call center: aba lançamentos, coordenação ou orçamentos
-    if(ehLiderCC) {
-      try {
-        if(abaLiderCC === "callcenter") renderCoord();
-        else if(abaLiderCC === "orcamentos") renderKanbanOrcamentos();
-        else { atualizarCards(); renderTabela(); }
-      } catch(e) { console.warn("[autoRefresh] liderCC:", e); }
     }
 
     // 4) Recepcionista: depende da aba ativa
@@ -4078,7 +4057,7 @@ function atualizarCards() {
   } else {
     ({ caixa, credito } = calcTotais(lancMes));
   }
-  const isCC = perfil==="callcenter"||perfil==="lider_callcenter";
+  const isCC = perfil==="callcenter";
   const metaCaixa   = isCC ? (metas.meta_caixa_callcenter||0) : (metas.meta_caixa_recepcao||0);
   const metaCredito = metas.meta_credito_recepcao||0;
   const contBoleto  = isCC ? 0 : lancMes.filter(l => l.tipo==="entrada" && l.forma_pagamento==="Boleto").length;
@@ -4191,9 +4170,8 @@ async function calcularRanking() {
   if(!FAZ_LANC.includes(perfil)) return;
 
   try {
-    // lider_callcenter compete no mesmo ranking do callcenter
-    const isCC = perfil==="callcenter" || perfil==="lider_callcenter";
-    const perfisGrupo = isCC ? ["callcenter","lider_callcenter"] : ["recepcionista","lider"];
+    const isCC = perfil==="callcenter";
+    const perfisGrupo = isCC ? ["callcenter"] : ["recepcionista","lider"];
 
     const snap = await db.collection("lancamentos")
       .where("mes_ano","==",mesAno)
@@ -4220,7 +4198,7 @@ async function calcularRanking() {
       ? `Você está em ${pos}º lugar este mês`
       : "Nenhum lançamento ainda";
     document.getElementById("rank-sub").textContent  =
-      `Entre ${total} ${(perfil==="callcenter"||perfil==="lider_callcenter")?"atendentes":"colaboradoras"} — caixa acumulado`;
+      `Entre ${total} ${perfil==="callcenter"?"atendentes":"colaboradoras"} — caixa acumulado`;
   } catch(e) { console.error("ranking:", e); }
 }
 
@@ -4778,8 +4756,7 @@ function toggleSaidaEmbutidaOrc() {
 // Recepcionista/callcenter/coord ficam capadas em 10% do total.
 function descontoLiberado() {
   const p = (usuario?.perfil || "").toLowerCase();
-  return p === "lider" || p === "lider_callcenter"
-      || p === "gestor" || p === "subgestora";
+  return p === "lider" || p === "gestor" || p === "subgestora";
 }
 
 // Lê os campos do form de Entrada e devolve {tipo, pct, rs, descR$, totalBruto}.
@@ -5118,7 +5095,7 @@ function atualizarCardPremiacao(caixa, credito, metaCaixa, metaCredito, perfil, 
   if(!el) return;
 
   // Call Center: lógica por faixa fixa
-  if(perfil === "callcenter" || perfil === "lider_callcenter") {
+  if(perfil === "callcenter") {
     const { valor, faixa, proxFaixa, faltaProx } = calcPremiacao(caixa, credito, perfil, metaCaixa, metaCredito);
     let proxHtml = "";
     if(proxFaixa && faltaProx > 0) {
@@ -5920,7 +5897,7 @@ function renderCardMetasEquipe() {
       ? agregarTotaisEquipeLancs(equipeLancs.filter(l => ["recepcionista","lider"].includes(l.perfil)))
       : getTotaisEquipeFatDiario(mesAno);
     // CC: mantém lancamentos para ranking individual por pessoa
-    const srcCC  = (usarHist ? historicoEquipeAtual : equipeLancs).filter(d => ["callcenter","lider_callcenter"].includes(d.perfil));
+    const srcCC  = (usarHist ? historicoEquipeAtual : equipeLancs).filter(d => d.perfil === "callcenter");
     const totCC  = usarHist ? calcTotaisFromHistoricoDocs(srcCC)  : calcTotaisDetalhados(srcCC);
 
     // TODO: configurar metas de Angra
@@ -5982,10 +5959,10 @@ function renderCardMetasEquipe() {
     el.innerHTML = medHtml + ccHtml;
 
   } else if(grupoCC) {
-    // ── Coord / lider_callcenter: vê só CC (comportamento original) ──
+    // ── Coord: vê só CC (comportamento original) ──
     const metaCC    = m.meta_caixa_callcenter_equipe || METAS_EQUIPE_PADRAO.meta_caixa_callcenter_equipe;
     const metaInd   = m.meta_caixa_callcenter || META_CC_PADRAO;
-    const srcCC2    = (usarHist ? historicoEquipeAtual : equipeLancs).filter(d => ["callcenter","lider_callcenter"].includes(d.perfil));
+    const srcCC2    = (usarHist ? historicoEquipeAtual : equipeLancs).filter(d => d.perfil === "callcenter");
     const totCC2    = usarHist ? calcTotaisFromHistoricoDocs(srcCC2) : calcTotaisDetalhados(srcCC2);
     const porPessoa2 = {};
     if(usarHist) {
@@ -6421,17 +6398,17 @@ function renderDashHistorico() {
 
   // Ranking
   const rankRec = docs.filter(r => r.perfil==="recepcionista"||r.perfil==="lider").sort((a,b)=>b.caixa-a.caixa);
-  const rankCC  = docs.filter(r => r.perfil==="callcenter"||r.perfil==="lider_callcenter").sort((a,b)=>b.caixa-a.caixa);
+  const rankCC  = docs.filter(r => r.perfil==="callcenter").sort((a,b)=>b.caixa-a.caixa);
   const rank    = [...rankRec, ...rankCC];
   const maxCaixa = rank[0]?.caixa || 1;
   const medals   = ["🥇","🥈","🥉"];
 
   function rankRow(r, i) {
-    const mC  = (r.perfil==="callcenter"||r.perfil==="lider_callcenter")
+    const mC  = (r.perfil==="callcenter")
       ? (dashMetasMes?.meta_caixa_callcenter||0) : (dashMetasMes?.meta_caixa_recepcao||0);
     const pct = mC > 0 ? (r.caixa/mC*100).toFixed(1) : "—";
     const barW = Math.min((r.caixa/maxCaixa)*100,100).toFixed(0);
-    const isCC = r.perfil==="callcenter"||r.perfil==="lider_callcenter";
+    const isCC = r.perfil==="callcenter";
     const premV = mC > 0
       ? (isCC ? calcPremiacao(r.caixa,r.credito||0,r.perfil,mC,0).valor
                : calcPremiacaoCaixaRec(r.caixa,r.credito||0,mC,dashMetasMes?.meta_credito_recepcao||0,dashMesAno).valor)
@@ -6460,7 +6437,7 @@ function renderDashHistorico() {
   // Cards por colaboradora
   function colabCard(r) {
     const perfil = r.perfil;
-    const mC  = (perfil==="callcenter"||perfil==="lider_callcenter")
+    const mC  = (perfil==="callcenter")
       ? (dashMetasMes?.meta_caixa_callcenter||0) : (dashMetasMes?.meta_caixa_recepcao||0);
     const mCr = dashMetasMes?.meta_credito_recepcao||0;
     const prem = mC > 0 ? calcPremiacao(r.caixa||0, r.credito||0, perfil, mC, mCr) : null;
@@ -7379,7 +7356,7 @@ function renderDashRanking(lista) {
   }));
 
   const rankRec = todos.filter(r => r.perfil==="recepcionista"||r.perfil==="lider").sort((a,b)=>b.caixa-a.caixa);
-  const rankCC  = todos.filter(r => r.perfil==="callcenter"||r.perfil==="lider_callcenter").sort((a,b)=>b.caixa-a.caixa);
+  const rankCC  = todos.filter(r => r.perfil==="callcenter").sort((a,b)=>b.caixa-a.caixa);
   const rank = [...rankRec, ...rankCC];
 
   const maxCaixa = rank[0]?.caixa || 1;
@@ -7391,14 +7368,14 @@ function renderDashRanking(lista) {
   }
 
   function rankRow(r, posicao) {
-    const metaC = (r.perfil==="callcenter"||r.perfil==="lider_callcenter")
+    const metaC = (r.perfil==="callcenter")
       ? (dashMetasMes?.meta_caixa_callcenter||0)
       : (dashMetasMes?.meta_caixa_recepcao||0);
     const pct = metaC > 0 ? (r.caixa/metaC*100).toFixed(1) : "—";
     const barW = Math.min((r.caixa/maxCaixa)*100,100).toFixed(0);
     const premBadge = metaC > 0
       ? (() => {
-          const isCC = r.perfil==="callcenter"||r.perfil==="lider_callcenter";
+          const isCC = r.perfil==="callcenter";
           let v = 0;
           if(isCC) { v = calcPremiacao(r.caixa,r.credito,r.perfil,metaC,0).valor; }
           else     { v = calcPremiacaoCaixaRec(r.caixa,r.credito,metaC,dashMetasMes?.meta_credito_recepcao||0,dashMesAno).valor; }
@@ -7449,13 +7426,13 @@ function renderDashColaboradoras(lista) {
   }
 
   const nomesRec = todosNomes.filter(n => { const p=PERFIS[n]||""; return p==="recepcionista"||p==="lider"; });
-  const nomesCC  = todosNomes.filter(n => { const p=PERFIS[n]||""; return p==="callcenter"||p==="lider_callcenter"; });
+  const nomesCC  = todosNomes.filter(n => { const p=PERFIS[n]||""; return p==="callcenter"; });
 
   function renderCard(nome) {
     const ls = por[nome];
     const tot = calcTotaisDetalhados(ls);
     const perfil = PERFIS[nome] || "";
-    const metaC  = (perfil === "callcenter" || perfil === "lider_callcenter")
+    const metaC  = (perfil === "callcenter")
       ? (dashMetasMes?.meta_caixa_callcenter||0)
       : (dashMetasMes?.meta_caixa_recepcao||0);
     const metaCr = dashMetasMes?.meta_credito_recepcao||0;
@@ -9108,7 +9085,6 @@ function filtrarOrcamentosPorPerfil(lista) {
   if(SO_DASHBOARD.includes(perfil)) return lista; // gestora/subgestora vê tudo
   // Schema novo (Fase B): doc grava `usuario_nome` e `perfil`.
   if(perfil === "lider")            return lista.filter(o => o.perfil === "recepcionista" || o.perfil === "lider");
-  if(perfil === "lider_callcenter") return lista.filter(o => o.perfil === "callcenter"    || o.perfil === "lider_callcenter");
   // recepcionista/callcenter: só os próprios
   return lista.filter(o => o.usuario_nome === nome);
 }
@@ -9122,7 +9098,6 @@ function podeEditarOrcamento(o) {
   if(SO_DASHBOARD.includes(perfil)) return false; // gestora/subgestora só vê
   if(o.usuario_nome === usuario.nome) return true;
   if(perfil === "lider"            && (o.perfil === "recepcionista" || o.perfil === "lider")) return true;
-  if(perfil === "lider_callcenter" && (o.perfil === "callcenter"    || o.perfil === "lider_callcenter")) return true;
   return false;
 }
 
@@ -9149,7 +9124,7 @@ function prepararFormOrcamento() {
 
   // Mostra/oculta campo "ID do Caso" conforme perfil
   const wrapId = document.getElementById("orc-id-caso-wrap");
-  const ehCC = usuario.perfil === "callcenter" || usuario.perfil === "lider_callcenter";
+  const ehCC = usuario.perfil === "callcenter";
   if(wrapId) wrapId.style.display = ehCC ? "" : "none";
 
   // Preenche datalist de médicos
@@ -9276,7 +9251,7 @@ async function salvarOrcamento() {
   if(!pgto)     { toast("Selecione a forma de pagamento.", "err"); return; }
   if(total <= 0){ toast("Valor total deve ser maior que zero.", "err"); return; }
 
-  const ehCC = usuario.perfil === "callcenter" || usuario.perfil === "lider_callcenter";
+  const ehCC = usuario.perfil === "callcenter";
   if(ehCC && !idCaso) { toast("ID do caso é obrigatório para Call Center.", "err"); return; }
 
   // Saída embutida (opcional). Armazenada no documento; vira lançamento na Fase 2.
@@ -9571,7 +9546,7 @@ async function confirmarReverterPagamento(docId) {
 
 // E1 — quem pode editar este lançamento agora.
 // Recepcionista/callcenter editam apenas cards não-pagos.
-// Liderança (PODE_EDITAR_LANC: gestor/subgestora/coordenadora/lider/lider_callcenter) edita qualquer.
+// Liderança (PODE_EDITAR_LANC: gestor/subgestora/coordenadora/lider) edita qualquer.
 function podeEditarCard(l) {
   const perfil = usuario?.perfil;
   const ehPago = (l?.status || "acompanhar") === "pago";
@@ -11103,13 +11078,11 @@ function iniciarRelatorios() {
 
   // Aviso de área (visível só pra líderes)
   const perfil = usuario?.perfil;
-  const ehLiderArea = (perfil === "lider" || perfil === "lider_callcenter");
+  const ehLiderArea = (perfil === "lider");
   const aviso = document.getElementById("rel-aviso-area");
   if(aviso) {
     if(ehLiderArea) {
-      aviso.textContent = perfil === "lider"
-        ? "ℹ️ Você visualiza apenas lançamentos da Recepção."
-        : "ℹ️ Você visualiza apenas lançamentos do Call Center.";
+      aviso.textContent = "ℹ️ Você visualiza apenas lançamentos da Recepção.";
       aviso.style.display = "";
     } else {
       aviso.style.display = "none";
@@ -11139,7 +11112,6 @@ function preencherSelectRecepRelatorio() {
     .filter(u => u.status !== "afastada")
     .filter(u => {
       if(perfil === "lider")            return PERFIS_RECEPCAO.includes(u.perfil);
-      if(perfil === "lider_callcenter") return PERFIS_CALLCENTER.includes(u.perfil);
       // Demais (gestão/coord/financeiro): inclui todos os que fazem lançamento
       return FAZ_LANC.includes(u.perfil);
     })
@@ -11349,8 +11321,6 @@ async function gerarRelatorio() {
     // Filtro por área (líderes)
     if(perfil === "lider") {
       docs = docs.filter(l => PERFIS_RECEPCAO.includes(l.perfil));
-    } else if(perfil === "lider_callcenter") {
-      docs = docs.filter(l => PERFIS_CALLCENTER.includes(l.perfil));
     }
 
     // Filtros da UI
