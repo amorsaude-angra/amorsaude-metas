@@ -2261,21 +2261,19 @@ const auth = firebase.auth();
 // ═══════════════════════════════════════════════════════════
 //  DADOS DOS USUÁRIOS
 // ═══════════════════════════════════════════════════════════
-// Chave = UID do Firebase Auth; valor = { nome, perfil, email }
-// Perfis disponíveis:
-// - gestor:        acesso total (Laudenir)
-// - subgestora:    acesso quase total (Karoane, Eduarda)
-// - coordenador:   gerencia recepção (Gabriel)
-// - recepcionista: atende e lança (recepcionistas comuns)
+// Chave = email do Firebase Auth; valor = { nome, perfil, [labelCustom], [status], [uid] }
+// labelCustom sobrescreve PERFIL_LABEL na UI (header + ranking) via labelPerfilDe().
+// status="afastada" bloqueia login. uid é só referência humana (lookup é por email).
+// Perfis: gestor, subgestora, lider, recepcionista, financeiro.
 const USUARIOS = {
-  "UOyBt0cwuIR7YcLgq8lriIDpi8E3": { nome: "Laudenir",          perfil: "gestor",        email: "laudi.rmj@gmail.com" },
-  "xic5R9XCEWh87i4V74jPgPl1Bap1": { nome: "Karoane",           perfil: "subgestora",    email: "financeiro.angrarj@gmail.com" },
-  "DDTWfzgKcZcQbpdQFbtsgUbDsx12": { nome: "Eduarda",           perfil: "subgestora",    email: "eduardaaraujo1502@gmail.com" },
-  "eYxInJlRwoQ86pSpFSPh2Wczjiv1": { nome: "Gabriel",           perfil: "coordenador",   email: "gsantospereira90@gmail.com" },
-  "eeQsPJl3imMTahadhDyjcVNBWMS2": { nome: "Yasmin Oliveira",   perfil: "recepcionista", email: "yasminoliveira2404@icloud.com" },
-  "HbDPzVrkrpbAPQsSNqLmIzXMpOO2": { nome: "Yasmin Pimentel",   perfil: "recepcionista", email: "yasmin.pimentel@hotmail.com" },
-  "ZKUZ5vimhEg1r7Wq06YNqgzilo83": { nome: "Gabriela Cardoso",  perfil: "recepcionista", email: "gabrielacardosorocharj@gmail.com" },
-  "wHh9a0mtyofUmWpFT0znli26LHM2": { nome: "Leticia Eleoterio", perfil: "recepcionista", email: "leticia.eleoterio23@gmail.com" },
+  "laudi.rmj@gmail.com":             { nome: "Laudenir",        perfil: "gestor",        uid: "UOyBt0cwuIR7YcLgq8lriIDpi8E3" },
+  "eduardaaraujo1502@gmail.com":     { nome: "Eduarda",         perfil: "subgestora",    uid: "DDTWfzgKcZcQbpdQFbtsgUbDsx12" },
+  "gsantospereira90@gmail.com":      { nome: "Gabriel",         perfil: "lider",         labelCustom: "Coordenador", uid: "eYxInJlRwoQ86pSpFSPh2Wczjiv1" },
+  "financeiro.angrarj@gmail.com":    { nome: "Karoane",         perfil: "subgestora",    labelCustom: "Financeiro",  uid: "xic5R9XCEWh87i4V74jPgPl1Bap1" },
+  "yasminoliveira2404@icloud.com":   { nome: "Yasmin Oliveira", perfil: "recepcionista", uid: "eeQsPJl3imMTahadhDyjcVNBWMS2" },
+  "leticia.eleoterio23@gmail.com":   { nome: "Letícia",         perfil: "recepcionista", uid: "wHh9a0mtyofUmWpFT0znli26LHM2" },
+  "gabrielacardosorocharj@gmail.com": { nome: "Gabriela",        perfil: "recepcionista", uid: "ZKUZ5vimhEg1r7Wq06YNqgzilo83" },
+  "yasmin.pimentel@hotmail.com":     { nome: "Yasmin Pimentel", perfil: "recepcionista", status: "afastada", uid: "HbDPzVrkrpbAPQsSNqLmIzXMpOO2" },
 };
 
 // Mapa derivado: nome → perfil (para lookups internos por nome de exibição)
@@ -2283,10 +2281,11 @@ const PERFIS = Object.fromEntries(
   Object.values(USUARIOS).map(u => [u.nome, u.perfil])
 );
 
-// Retorna o email real de uma usuária pelo nome de exibição
+// Retorna o email real de uma usuária pelo nome de exibição.
+// Email é a chave de USUARIOS, então procura pelo entry cujo value bate em nome.
 function emailPorNome(nome) {
-  const u = Object.values(USUARIOS).find(x => x.nome === nome);
-  return u?.email || null;
+  const entry = Object.entries(USUARIOS).find(([, u]) => u.nome === nome);
+  return entry ? entry[0] : null;
 }
 
 // Status de colaboradora: "afastada" bloqueia login mas mantém histórico.
@@ -2304,6 +2303,14 @@ const PERFIL_LABEL = {
   recepcionista:"Recepcionista Médica",
   financeiro:"Financeiro"
 };
+
+// Label de perfil pra UI: prioriza labelCustom do USUARIOS (override por usuária),
+// depois PERFIL_LABEL[perfil], e cai no nome técnico como último fallback.
+// Usado no header e nas tabelas de ranking pra refletir Coordenador/Financeiro.
+function labelPerfilDe(nome, perfilFallback) {
+  const u = Object.values(USUARIOS).find(x => x.nome === nome);
+  return u?.labelCustom || PERFIL_LABEL[u?.perfil || perfilFallback] || perfilFallback;
+}
 
 // TODO: configurar metas de Angra
 // Metas padrão da EQUIPE — valores independentes, NÃO são soma das metas individuais
@@ -3339,10 +3346,10 @@ function fazerLogout() {
 // Nota: só age se houver sessão Firebase ativa; login local não é persistido
 auth.onAuthStateChanged(async fbUser => {
   if(fbUser) {
-    // Sessão Firebase válida — identifica a usuária pelo UID (chave do objeto USUARIOS)
-    const u = USUARIOS[fbUser.uid];
+    // Sessão Firebase válida — identifica a usuária pelo email (chave do objeto USUARIOS)
+    const u = USUARIOS[fbUser.email];
     if(!u) {
-      console.warn("[Auth] UID não reconhecido:", fbUser.uid, fbUser.email);
+      console.warn("[Auth] Email não reconhecido:", fbUser.email, fbUser.uid);
       auth.signOut(); return;
     }
     if(u.status === "afastada") {
@@ -3381,9 +3388,9 @@ async function garantirDocUsuario() {
     if(!user) return;                  // sem sessão Firebase Auth (login local), nada a fazer
     if(!user.email) return;            // sem email no token, não há como mapear
 
-    const dados = USUARIOS[user.uid];
+    const dados = USUARIOS[user.email];
     if(!dados) {
-      console.warn("[garantirDocUsuario] UID não está em USUARIOS:", user.uid, user.email);
+      console.warn("[garantirDocUsuario] Email não está em USUARIOS:", user.email, user.uid);
       return;
     }
 
@@ -3438,7 +3445,7 @@ function iniciarApp() {
   const { nome, perfil } = usuario;
 
   document.getElementById("h-nome").textContent    = nome;
-  document.getElementById("h-perf").textContent    = PERFIL_LABEL[perfil] || perfil;
+  document.getElementById("h-perf").textContent    = labelPerfilDe(nome, perfil);
   document.getElementById("badge-mes").textContent = labelMes(mesAno);
 
   const temLanc      = FAZ_LANC.includes(perfil);
@@ -6143,7 +6150,7 @@ function renderDashHistorico() {
     return `<tr>
       <td><span class="rank-medal">${medals[i]||i+1}</span></td>
       <td><strong>${r.nome}</strong>${premBadge?"<br>"+premBadge:""}</td>
-      <td style="color:var(--text2);font-size:12px">${PERFIL_LABEL[r.perfil]||r.perfil}</td>
+      <td style="color:var(--text2);font-size:12px">${labelPerfilDe(r.nome, r.perfil)}</td>
       <td>${brl(r.caixa)}<div class="rank-bar"><div class="rank-bar-fill" style="width:${barW}%"></div></div></td>
       <td>${brl(r.credito||0)}</td>
       <td style="font-weight:600;color:${pct!=="—"&&+pct>=100?"var(--success)":"var(--primary)"}">${pct!=="—"?pct+"%":"—"}</td>
@@ -6987,7 +6994,7 @@ function renderDashRanking(lista) {
     return `<tr>
       <td><span class="rank-medal">${medals[posicao]||posicao+1}</span></td>
       <td><strong>${r.nome}</strong>${premBadge ? "<br>"+premBadge : ""}</td>
-      <td style="color:var(--text2);font-size:12px">${PERFIL_LABEL[r.perfil]||r.perfil}</td>
+      <td style="color:var(--text2);font-size:12px">${labelPerfilDe(r.nome, r.perfil)}</td>
       <td>
         ${brl(r.caixa)}
         <div class="rank-bar"><div class="rank-bar-fill" style="width:${barW}%"></div></div>
