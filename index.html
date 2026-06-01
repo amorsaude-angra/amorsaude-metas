@@ -2647,16 +2647,6 @@ function ehRecusado(l)        { return l && l.status === "recusado"; }
 function podeMarcarRecusa()   { return mesAno >= MARCO_NOVO_MODELO; }
 const VE_COORD = ["coordenador","coordenadora"];
 
-// Premiação coletiva (pool) para Lab, Imagem, Procedimentos e Crédito
-// TODO: validar comportamento em Angra — configurar exclusões/quantidade do pool conforme equipe local
-const POOL_REC_EXCLUIDOS = [];  // recepcionistas excluídas do pool
-const POOL_REC_QTD       = 0;   // recepcionistas no pool
-const FAIXAS_POOL_LAB    = [{pct:1.0,pool:1500},{pct:0.9,pool:1125},{pct:0.8,pool:500}];
-const FAIXAS_POOL_IMG    = [{pct:1.0,pool:500}, {pct:0.9,pool:375}, {pct:0.8,pool:250}];
-const FAIXAS_POOL_PROC   = [{pct:1.0,pool:500}, {pct:0.9,pool:375}, {pct:0.8,pool:250}];
-// Crédito vigente apenas a partir de MARCO_NOVO_MODELO ("2026-05") — não-retroativo.
-const FAIXAS_POOL_CRED   = [{pct:1.0,pool:500}, {pct:0.9,pool:375}, {pct:0.8,pool:250}];
-
 // ═══════════════════════════════════════════════════════════
 //  PREMIAÇÃO COLETIVA (Angra · estreia 2026-06)
 // ═══════════════════════════════════════════════════════════
@@ -3164,74 +3154,12 @@ function diasUteisRestantes() {
   return calcularDiasUteisRestantes(hoje.getFullYear(), hoje.getMonth() + 1);
 }
 
-// Calcula premiação por faixa para recepcionista/lider
-function calcPremiacao(caixa, credito, perfil, metaCaixa, metaCredito) {
-  if(metaCaixa <= 0) return { valor:0, faixa:"Meta não definida", proxFaixa:null, faltaProx:0 };
-  const pct = caixa / metaCaixa;
-
-  // recepcionista / lider
-  const pctCred = metaCredito > 0 ? credito / metaCredito : 0;
-  if(pct >= 1.0 && pctCred >= 1.0) return { valor:952, faixa:"100% caixa + 100% crédito 🏆", proxFaixa:null,             faltaProx:0 };
-  if(pct >= 1.0)                   return { valor:600, faixa:"100% do caixa ✅",              proxFaixa:"100% crédito",  faltaProx:Math.max(0,metaCredito-credito) };
-  if(pct >= 0.9)                   return { valor:450, faixa:"90% do caixa 🔥",               proxFaixa:"100% do caixa", faltaProx:metaCaixa-caixa };
-  if(pct >= 0.8)                   return { valor:300, faixa:"80% do caixa",                  proxFaixa:"90% do caixa",  faltaProx:metaCaixa*0.9-caixa };
-  return                                  { valor:0,   faixa:"Abaixo de 80%",                 proxFaixa:"80% do caixa",  faltaProx:metaCaixa*0.8-caixa };
-}
-
-// Premiação de caixa individual para recepcionista/lider (fórmula percentual).
-// A partir de MARCO_NOVO_MODELO (Maio/2026) faixas 80% e 90% pagam VALOR FIXO
-// (metaCaixa × 0.005 × mult). Em meses históricos mantém proporcional ao caixa real
-// (preserva pagamentos efetuados). Default mesAnoStr="" => fórmula antiga.
-function calcPremiacaoCaixaRec(caixa, credito, metaCaixa, metaCredito, mesAnoStr = "") {
-  if(metaCaixa <= 0) return {valor:0, faixa:"Meta não definida", proxFaixa:null, faltaProx:0};
-  const pct     = caixa / metaCaixa;
-  const pctCred = metaCredito > 0 ? credito / metaCredito : 0;
-  const usarRegraNova = mesAnoStr >= MARCO_NOVO_MODELO;
-  if(pct >= 1.0 && pctCred >= 1.0) return {
-    valor: (caixa + credito) * 0.007, faixa: "100% caixa + crédito 💎",
-    proxFaixa: null, faltaProx: 0
-  };
-  if(pct >= 1.0) return {
-    valor: caixa * 0.005, faixa: "100% do caixa ✅",
-    proxFaixa: "100% crédito", faltaProx: Math.max(0, metaCredito - credito)
-  };
-  if(pct >= 0.9) return {
-    valor: usarRegraNova ? metaCaixa * 0.005 * 0.75 : caixa * 0.005 * 0.75,
-    faixa: "90% do caixa 🔥",
-    proxFaixa: "100% do caixa", faltaProx: metaCaixa - caixa
-  };
-  if(pct >= 0.8) return {
-    valor: usarRegraNova ? metaCaixa * 0.005 * 0.50 : caixa * 0.005 * 0.50,
-    faixa: "80% do caixa",
-    proxFaixa: "90% do caixa", faltaProx: metaCaixa * 0.9 - caixa
-  };
-  return {valor:0, faixa:"Abaixo de 80%", proxFaixa:"80% do caixa", faltaProx: metaCaixa * 0.8 - caixa};
-}
-
 // Premiação de boleto individual (qtd. de boletos efetivados no mês)
 function calcPremBoleto(contBoleto) {
   if(contBoleto >= 5) return contBoleto * 25;
   if(contBoleto >= 3) return contBoleto * 15;
   if(contBoleto >= 1) return contBoleto * 10;
   return 0;
-}
-
-// Valor do pool coletivo baseado no total de equipe vs meta
-function calcPoolPremio(total, meta, faixas) {
-  if(meta <= 0) return 0;
-  const pct = total / meta;
-  for(const f of faixas) if(pct >= f.pct) return f.pool;
-  return 0;
-}
-
-// Parte individual do pool: líderes = 30%, recepcionistas no pool = 40% ÷ POOL_REC_QTD
-function calcPartePool(nome, pool) {
-  if(pool <= 0) return 0;
-  const perfil = PERFIS[nome] || "";
-  if(perfil === "lider") return pool * 0.30;
-  if(POOL_REC_EXCLUIDOS.includes(nome)) return 0;
-  if(POOL_REC_QTD <= 0) return 0; // TODO: configurar POOL_REC_QTD em Angra
-  return (pool * 0.40) / POOL_REC_QTD;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4252,20 +4180,13 @@ function atualizarProj(caixaAtual, metaCaixa, credito, metaCredito) {
           :                    "Vamos acelerar! 💪";
   }
 
-  const premProj = metaCaixa > 0
-    ? calcPremiacao(projCaixa, projCredito, usuario.perfil, metaCaixa, metaCredito||0)
-    : null;
-  const premStr = premProj && premProj.valor > 0
-    ? ` &nbsp;·&nbsp; Premiação projetada: <strong>${brl(premProj.valor)}</strong>`
-    : "";
-
   const credStr = temCredito && metaCredito > 0
     ? ` &nbsp;·&nbsp; Crédito projetado: <strong>${brl(projCredito)}</strong> (${pctCredito.toFixed(0)}%)`
     : "";
 
   document.getElementById("proj-val").textContent = `Projeção: ${brl(projCaixa)}`;
   document.getElementById("proj-det").innerHTML =
-    `${motiv}${metaCaixa>0?` (${pctCaixa.toFixed(0)}% da meta)`:""}${credStr}${premStr} &nbsp;·&nbsp; ${diasRest} dias úteis restantes`;
+    `${motiv}${metaCaixa>0?` (${pctCaixa.toFixed(0)}% da meta)`:""}${credStr} &nbsp;·&nbsp; ${diasRest} dias úteis restantes`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5718,7 +5639,7 @@ function renderCardMetasEquipe() {
   const diasUteis = m.dias_uteis || 22;
   const diasPassF = diasUteisPassadosFloat();
 
-  function metrica(tit, val, meta, extra) {
+  function metrica(tit, val, meta) {
     const pct    = meta > 0 ? Math.min((val/meta)*100, 100) : 0;
     const rawPct = meta > 0 ? (val/meta)*100 : 0;
     const classe = rawPct >= 80 ? "verde" : rawPct >= 50 ? "amarelo" : "vermelho";
@@ -5738,53 +5659,28 @@ function renderCardMetasEquipe() {
           <div class="equipe-bar"><div class="equipe-bar-fill ${classe}" style="width:${Math.min(pct,100)}%"></div></div>
           <div class="equipe-met-pct ${classe}">${rawPct.toFixed(1)}%</div>
           ${projHtml}
-          ${extra || ""}
         ` : '<div class="equipe-met-meta">Meta não definida</div>'}
       </div>`;
   }
 
-    const metaCaixa   = m.meta_caixa_equipe        || METAS_EQUIPE_PADRAO.meta_caixa_equipe;
-    const metaCredito = m.meta_credito_equipe      || METAS_EQUIPE_PADRAO.meta_credito_equipe;
-    const metaBoleto  = m.meta_boleto_equipe       || METAS_EQUIPE_PADRAO.meta_boleto_equipe;
-    // TODO: configurar metas de Angra
-    const metaLab     = m.meta_lab_equipe          || 0;
-    const metaImg     = m.meta_img_equipe          || 0;
-    const metaProc    = m.meta_proc_equipe         || 0;
-    const metaInj     = m.meta_injetaveis_equipe   || 0;
+  const metaCaixa   = m.meta_caixa_equipe        || METAS_EQUIPE_PADRAO.meta_caixa_equipe;
+  const metaCredito = m.meta_credito_equipe      || METAS_EQUIPE_PADRAO.meta_credito_equipe;
+  const metaBoleto  = m.meta_boleto_equipe       || METAS_EQUIPE_PADRAO.meta_boleto_equipe;
+  // TODO: configurar metas de Angra
+  const metaLab     = m.meta_lab_equipe          || 0;
+  const metaImg     = m.meta_img_equipe          || 0;
+  const metaProc    = m.meta_proc_equipe         || 0;
+  const metaInj     = m.meta_injetaveis_equipe   || 0;
 
-    // Pool de Crédito vigente apenas a partir do marco (Maio/2026).
-    const credVig  = mesAno >= MARCO_NOVO_MODELO;
-    const poolLab  = calcPoolPremio(tot.lab,  metaLab,  FAIXAS_POOL_LAB);
-    const poolImg  = calcPoolPremio(tot.img,  metaImg,  FAIXAS_POOL_IMG);
-    const poolProc = calcPoolPremio(tot.proc, metaProc, FAIXAS_POOL_PROC);
-    const poolCred = credVig ? calcPoolPremio(tot.credito, metaCredito, FAIXAS_POOL_CRED) : 0;
-
-    function parteExtra(pool, projPool) {
-      const parte     = calcPartePool(usuario.nome, pool);
-      const projParte = calcPartePool(usuario.nome, projPool);
-      if(parte <= 0 && pool <= 0) return "";
-      const projStr = (projParte !== parte && diasPassF > 0)
-        ? `<div class="equipe-met-meta" style="color:#B45309">Projeção parte: <strong>${brl(projParte)}</strong></div>` : "";
-      return `<div class="equipe-met-meta" style="margin-top:4px;color:#B45309">Sua parte: <strong>${brl(parte)}</strong></div>${projStr}`;
-    }
-
-    let projPoolLab = poolLab, projPoolImg = poolImg, projPoolProc = poolProc, projPoolCred = poolCred;
-    if(diasPassF > 0) {
-      projPoolLab  = calcPoolPremio((tot.lab     / diasPassF) * diasUteis, metaLab,     FAIXAS_POOL_LAB);
-      projPoolImg  = calcPoolPremio((tot.img     / diasPassF) * diasUteis, metaImg,     FAIXAS_POOL_IMG);
-      projPoolProc = calcPoolPremio((tot.proc    / diasPassF) * diasUteis, metaProc,    FAIXAS_POOL_PROC);
-      projPoolCred = credVig ? calcPoolPremio((tot.credito / diasPassF) * diasUteis, metaCredito, FAIXAS_POOL_CRED) : 0;
-    }
-
-    el.innerHTML = fonteHtml + `<div class="equipe-metricas-grid">` +
-      metrica("💰 Caixa",        tot.caixa,      metaCaixa)   +
-      metrica("💳 Crédito",      tot.credito,    metaCredito, parteExtra(poolCred, projPoolCred)) +
-      metrica("📄 Boleto",       tot.boleto,     metaBoleto)  +
-      metrica("🧪 Lab",          tot.lab,        metaLab,  parteExtra(poolLab,  projPoolLab))  +
-      metrica("🩻 Imagem",       tot.img,        metaImg,  parteExtra(poolImg,  projPoolImg))  +
-      metrica("💉 Procedimentos",tot.proc,       metaProc, parteExtra(poolProc, projPoolProc)) +
-      metrica("💊 Injetáveis",   tot.injetaveis, metaInj) +
-      `</div>`;
+  el.innerHTML = fonteHtml + `<div class="equipe-metricas-grid">` +
+    metrica("💰 Caixa",        tot.caixa,      metaCaixa)   +
+    metrica("💳 Crédito",      tot.credito,    metaCredito) +
+    metrica("📄 Boleto",       tot.boleto,     metaBoleto)  +
+    metrica("🧪 Lab",          tot.lab,        metaLab)     +
+    metrica("🩻 Imagem",       tot.img,        metaImg)     +
+    metrica("💉 Procedimentos",tot.proc,       metaProc)    +
+    metrica("💊 Injetáveis",   tot.injetaveis, metaInj)     +
+    `</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -6155,13 +6051,9 @@ function renderDashHistorico() {
     const mC  = dashMetasMes?.meta_caixa_recepcao||0;
     const pct = mC > 0 ? (r.caixa/mC*100).toFixed(1) : "—";
     const barW = Math.min((r.caixa/maxCaixa)*100,100).toFixed(0);
-    const premV = mC > 0
-      ? calcPremiacaoCaixaRec(r.caixa,r.credito||0,mC,dashMetasMes?.meta_credito_recepcao||0,dashMesAno).valor
-      : 0;
-    const premBadge = premV > 0 ? `<span class="prem-badge">🏅 ${brl(premV)}</span>` : "";
     return `<tr>
       <td><span class="rank-medal">${medals[i]||i+1}</span></td>
-      <td><strong>${r.nome}</strong>${premBadge?"<br>"+premBadge:""}</td>
+      <td><strong>${r.nome}</strong></td>
       <td style="color:var(--text2);font-size:12px">${labelPerfilDe(r.nome, r.perfil)}</td>
       <td>${brl(r.caixa)}<div class="rank-bar"><div class="rank-bar-fill" style="width:${barW}%"></div></div></td>
       <td>${brl(r.credito||0)}</td>
@@ -6182,14 +6074,12 @@ function renderDashHistorico() {
   function colabCard(r) {
     const perfil = r.perfil;
     const mC  = dashMetasMes?.meta_caixa_recepcao||0;
-    const mCr = dashMetasMes?.meta_credito_recepcao||0;
-    const prem = mC > 0 ? calcPremiacao(r.caixa||0, r.credito||0, perfil, mC, mCr) : null;
     const pct  = mC > 0 ? (((r.caixa||0)/mC)*100).toFixed(1)+"%" : "—";
     return `<div class="colab-card">
       <div class="colab-header" onclick="toggleColab(this)">
         <div>
           <div class="colab-nome">${r.nome}</div>
-          <div class="colab-resumo-txt">Caixa: ${brl(r.caixa||0)} · ${pct} da meta${prem&&prem.valor>0?" · 🏅 "+brl(prem.valor):""}</div>
+          <div class="colab-resumo-txt">Caixa: ${brl(r.caixa||0)} · ${pct} da meta</div>
         </div>
         <span class="colab-chev">▼</span>
       </div>
@@ -6848,15 +6738,9 @@ function renderDashRanking(lista) {
     const metaC = dashMetasMes?.meta_caixa_recepcao||0;
     const pct = metaC > 0 ? (r.caixa/metaC*100).toFixed(1) : "—";
     const barW = Math.min((r.caixa/maxCaixa)*100,100).toFixed(0);
-    const premBadge = metaC > 0
-      ? (() => {
-          const v = calcPremiacaoCaixaRec(r.caixa,r.credito,metaC,dashMetasMes?.meta_credito_recepcao||0,dashMesAno).valor;
-          return v > 0 ? `<span class="prem-badge">🏅 ${brl(v)}</span>` : "";
-        })()
-      : "";
     return `<tr>
       <td><span class="rank-medal">${medals[posicao]||posicao+1}</span></td>
-      <td><strong>${r.nome}</strong>${premBadge ? "<br>"+premBadge : ""}</td>
+      <td><strong>${r.nome}</strong></td>
       <td style="color:var(--text2);font-size:12px">${labelPerfilDe(r.nome, r.perfil)}</td>
       <td>
         ${brl(r.caixa)}
@@ -6901,10 +6785,7 @@ function renderDashColaboradoras(lista) {
   function renderCard(nome) {
     const ls = por[nome];
     const tot = calcTotaisDetalhados(ls);
-    const perfil = PERFIS[nome] || "";
     const metaC  = dashMetasMes?.meta_caixa_recepcao||0;
-    const metaCr = dashMetasMes?.meta_credito_recepcao||0;
-    const prem   = metaC > 0 ? calcPremiacao(tot.caixa,tot.credito,perfil,metaC,metaCr) : null;
     const pct    = metaC > 0 ? (tot.caixa/metaC*100).toFixed(1)+"%" : "—";
 
     const procDetHtml = Object.entries(tot.porProcTipo).length
@@ -6920,7 +6801,7 @@ function renderDashColaboradoras(lista) {
         <div class="colab-header" onclick="toggleColab(this)">
           <div>
             <div class="colab-nome">${nome}</div>
-            <div class="colab-resumo-txt">Caixa: ${brl(tot.caixa)} · ${pct} da meta${prem&&prem.valor>0?" · 🏅 "+brl(prem.valor):""}</div>
+            <div class="colab-resumo-txt">Caixa: ${brl(tot.caixa)} · ${pct} da meta</div>
           </div>
           <span class="colab-chev">▼</span>
         </div>
@@ -6933,7 +6814,6 @@ function renderDashColaboradoras(lista) {
             <div class="colab-stat"><label>Exames Imagem</label><div class="csv">${brl(tot.img)}</div></div>
             <div class="colab-stat"><label>Procedimentos</label><div class="csv">${brl(tot.proc)}</div></div>
             <div class="colab-stat"><label>Consultas</label><div class="csv">${brl(tot.consultas)}</div></div>
-            ${prem ? `<div class="colab-stat"><label>Premiação</label><div class="csv" style="color:#B45309">${brl(prem.valor)}</div></div>` : ""}
           </div>
           ${procDetHtml}
         </div>
