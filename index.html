@@ -3234,6 +3234,80 @@ function calcPartePool(nome, pool) {
   return (pool * 0.40) / POOL_REC_QTD;
 }
 
+// ═══════════════════════════════════════════════════════════
+//  PREMIAÇÃO COLETIVA — cálculo (Angra)
+// ═══════════════════════════════════════════════════════════
+// Recebe totais da equipe ({lab, img, proc, caixa}) + doc de metas
+// + caixaRealizado (fechamento manual) + entregouLucro (boolean).
+// Retorna { valorProdutos, valorCaixa, totalEquipe, produtosCalculado,
+// caixaCalculado }. As flags *Calculado=false sinalizam que faltava meta
+// (UI mostra "—" em vez de R$ 0,00) — distingue "sem meta configurada"
+// de "bateu, mas zero por não atingir nem 80%".
+function calcularPremiacaoColetiva(totaisEquipe, meta, caixaRealizado, entregouLucro) {
+  const ml = Number(meta?.meta_lab_equipe)   || 0;
+  const mi = Number(meta?.meta_img_equipe)   || 0;
+  const mp = Number(meta?.meta_proc_equipe)  || 0;
+  const mc = Number(meta?.meta_caixa_equipe) || 0;
+
+  // Produtos: precisa das 3 metas (lab + img + proc) > 0 — qualquer ausência
+  // invalida a faixa (evita divisão por zero e regra ambígua).
+  let valorProdutos = 0;
+  let produtosCalculado = false;
+  if(ml > 0 && mi > 0 && mp > 0) {
+    produtosCalculado = true;
+    const pctLab  = (Number(totaisEquipe?.lab)  || 0) / ml;
+    const pctImg  = (Number(totaisEquipe?.img)  || 0) / mi;
+    const pctProc = (Number(totaisEquipe?.proc) || 0) / mp;
+    const pctMin  = Math.min(pctLab, pctImg, pctProc);
+    // PREM_COLETIVA_FAIXAS_PRODUTOS já está em ordem 100→90→80; primeiro match vence.
+    for(const faixa of PREM_COLETIVA_FAIXAS_PRODUTOS) {
+      if(pctMin >= faixa.limiar) { valorProdutos = faixa.valorTotal; break; }
+    }
+  }
+
+  // Caixa: precisa de meta_caixa_equipe > 0. Realizado sanitizado a >= 0
+  // (já é sanitizado no salvar, mas defesa extra em runtime).
+  let valorCaixa = 0;
+  let caixaCalculado = false;
+  if(mc > 0) {
+    caixaCalculado = true;
+    const realizado = Math.max(0, Number(caixaRealizado) || 0);
+    if(realizado >= mc) {
+      const pct = entregouLucro ? PREM_COLETIVA_CAIXA_PCT_LUCRO : PREM_COLETIVA_CAIXA_PCT_SEM_LUCRO;
+      valorCaixa = realizado * pct;
+    }
+  }
+
+  return {
+    valorProdutos,
+    valorCaixa,
+    totalEquipe: valorProdutos + valorCaixa,
+    produtosCalculado,
+    caixaCalculado,
+  };
+}
+
+// Parcela de produtos: total dividido em partes iguais entre ativos
+// (4 hoje: Gabriel + Yasmin O. + Letícia + Gabriela).
+function parcelaProdutos(valorProdutos) {
+  const n = PREM_COLETIVA_ATIVOS.length;
+  if(n <= 0) return 0;
+  return (Number(valorProdutos) || 0) / n;
+}
+
+// Parcela de caixa do coordenador (Gabriel): 50% do bolo de caixa.
+function parcelaCaixaCoord(valorCaixa) {
+  return (Number(valorCaixa) || 0) * PREM_COLETIVA_CAIXA_PCT_COORD;
+}
+
+// Parcela de caixa por recepcionista: os outros 50% divididos pelas recep.
+// "Recepcionista" aqui = ativos que não são o coordenador (3 hoje).
+function parcelaCaixaRecep(valorCaixa) {
+  const numRecep = PREM_COLETIVA_ATIVOS.length - 1;  // exclui coordenador
+  if(numRecep <= 0) return 0;
+  return ((Number(valorCaixa) || 0) * (1 - PREM_COLETIVA_CAIXA_PCT_COORD)) / numRecep;
+}
+
 function toast(msg, tipo="ok") {
   const t = document.getElementById("toast");
   t.textContent = msg; t.className = `show ${tipo}`;
