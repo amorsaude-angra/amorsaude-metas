@@ -3293,6 +3293,75 @@ function renderPremColetiva(containerId, lancs, mesAnoArg, meta) {
     return parcP + parcC;
   }
 
+  // Cenários: estimativa de premiação se a equipe bater a meta geral.
+  // Renderiza após o bloco "Sua parcela" / "Total da equipe", mostrando
+  // valores hipotéticos (faixa máxima de produtos + caixa com/sem lucro).
+  function renderCenarios() {
+    const mc = Number(meta?.meta_caixa_equipe) || 0;
+    const ml = Number(meta?.meta_lab_equipe)   || 0;
+    const mi = Number(meta?.meta_img_equipe)   || 0;
+    const mp = Number(meta?.meta_proc_equipe)  || 0;
+    const temCaixa    = mc > 0;
+    const temProdutos = ml > 0 && mi > 0 && mp > 0;
+    if(!temCaixa && !temProdutos) return "";
+
+    // viewer: aplica perspectiva por perfil. Gestão vê total; ativos veem própria parcela.
+    function viewer(valorTotal, ehProduto) {
+      if(ehGestao) return valorTotal;
+      if(ehProduto) return parcelaProdutos(valorTotal);
+      return ehCoord ? parcelaCaixaCoord(valorTotal) : parcelaCaixaRecep(valorTotal);
+    }
+
+    // Caixa: 2 cenários (com lucro = 1%, sem lucro = 0,5%)
+    const caixaComLucroTotal = mc * PREM_COLETIVA_CAIXA_PCT_LUCRO;
+    const caixaSemLucroTotal = mc * PREM_COLETIVA_CAIXA_PCT_SEM_LUCRO;
+    const caixaComLucroView  = viewer(caixaComLucroTotal, false);
+    const caixaSemLucroView  = viewer(caixaSemLucroTotal, false);
+
+    // Produtos: 3 faixas (100% / 90% / 80%) — valorTotal da PREM_COLETIVA_FAIXAS_PRODUTOS
+    const faixaPorLimiar = limiar => PREM_COLETIVA_FAIXAS_PRODUTOS.find(f => f.limiar === limiar)?.valorTotal || 0;
+    const faixa100Total = faixaPorLimiar(1.00);
+    const faixa90Total  = faixaPorLimiar(0.90);
+    const faixa80Total  = faixaPorLimiar(0.80);
+    const f100View = viewer(faixa100Total, true);
+    const f90View  = viewer(faixa90Total,  true);
+    const f80View  = viewer(faixa80Total,  true);
+
+    // Máximo possível: produtos faixa 100% + caixa com lucro
+    const maxView = (temProdutos ? f100View : 0) + (temCaixa ? caixaComLucroView : 0);
+
+    const tituloCen = ehGestao
+      ? "💡 Premiação da equipe se bater a meta geral"
+      : "💡 Sua premiação se a equipe bater a meta geral";
+
+    const secCaixa = !temCaixa ? "" : `
+      <div style="margin-top:10px">
+        <div style="font-size:13px;font-weight:600">💰 Caixa <span style="color:var(--text2);font-weight:400;font-size:12px">(meta ${brl(mc)})</span></div>
+        <div style="font-size:13px;margin-top:4px;display:flex;justify-content:space-between;padding-left:18px"><span>Com lucro do mês:</span><strong>${brl(caixaComLucroView)}</strong></div>
+        <div style="font-size:13px;display:flex;justify-content:space-between;padding-left:18px"><span>Sem lucro do mês:</span><strong>${brl(caixaSemLucroView)}</strong></div>
+      </div>`;
+
+    const secProdutos = !temProdutos ? "" : `
+      <div style="margin-top:10px">
+        <div style="font-size:13px;font-weight:600">🧪🩻💉 Produtos (Lab + Img + Proc juntos)</div>
+        <div style="font-size:13px;margin-top:4px;display:flex;justify-content:space-between;padding-left:18px"><span>100% em todos:</span><strong>${brl(f100View)}</strong></div>
+        <div style="font-size:13px;display:flex;justify-content:space-between;padding-left:18px"><span> 90% em todos:</span><strong>${brl(f90View)}</strong></div>
+        <div style="font-size:13px;display:flex;justify-content:space-between;padding-left:18px"><span> 80% em todos:</span><strong>${brl(f80View)}</strong></div>
+      </div>`;
+
+    const linhaMax = (temCaixa && temProdutos)
+      ? `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);font-size:13px;font-weight:600;display:flex;justify-content:space-between"><span>Máximo possível este mês:</span><strong style="color:#B45309">${brl(maxView)}</strong></div>`
+      : "";
+
+    return `
+      <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:14px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px">${tituloCen}</div>
+        ${secCaixa}
+        ${secProdutos}
+        ${linhaMax}
+      </div>`;
+  }
+
   let body = "";
 
   if(ehGestao) {
@@ -3328,7 +3397,7 @@ function renderPremColetiva(containerId, lancs, mesAnoArg, meta) {
       <div style="font-size:14px;margin-top:6px">Total: <strong>${brl(totalPropria())}</strong></div>`;
   }
 
-  el.innerHTML = `<div class="card-title">${titulo}</div>${body}`;
+  el.innerHTML = `<div class="card-title">${titulo}</div>${body}${renderCenarios()}`;
 }
 
 // Soma das parcelas (produtos + caixa) de um ativo. Usado pelo detalhamento
