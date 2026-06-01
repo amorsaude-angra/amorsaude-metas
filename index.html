@@ -794,6 +794,7 @@
   <div id="lider-nav">
     <button class="lider-tab active" id="lider-tab-metas"  onclick="mudarAbaLider('metas')">🎯 Meta e Premiação</button>
     <button class="lider-tab"        id="lider-tab-orc"    onclick="mudarAbaLider('orcamentos')">📋 Acompanhamento</button>
+    <button class="lider-tab"        id="lider-tab-nf"     onclick="mudarAbaLider('nf')">🧾 NF</button>
     <button class="lider-tab"        id="lider-tab-lanc"   onclick="mudarAbaLider('lancamentos')">📝 Orçamento</button>
     <button class="lider-tab"        id="lider-tab-equipe" onclick="mudarAbaLider('equipe')">📊 Equipe</button>
     <button class="lider-tab"        id="lider-tab-dash"   onclick="mudarAbaLider('dashboard')">🏢 Dashboard</button>
@@ -804,6 +805,7 @@
   <div id="rec-nav">
     <button class="lider-tab active" id="rec-tab-metas"  onclick="mudarAbaRec('metas')">🎯 Meta e Premiação</button>
     <button class="lider-tab"        id="rec-tab-orc"    onclick="mudarAbaRec('orcamentos')">📋 Acompanhamento</button>
+    <button class="lider-tab"        id="rec-tab-nf"     onclick="mudarAbaRec('nf')">🧾 NF</button>
     <button class="lider-tab"        id="rec-tab-lanc"   onclick="mudarAbaRec('lancamentos')">📝 Orçamento</button>
     <button class="lider-tab"        id="rec-tab-equipe" onclick="mudarAbaRec('equipe')">📊 Equipe</button>
   </div>
@@ -812,6 +814,7 @@
   <div id="gestor-nav">
     <button class="lider-tab active" id="gestor-tab-dash" onclick="mudarAbaGestor('dashboard')">🏢 Dashboard</button>
     <button class="lider-tab"        id="gestor-tab-orc"  onclick="mudarAbaGestor('orcamentos')">📋 Acompanhamento</button>
+    <button class="lider-tab"        id="gestor-tab-nf"   onclick="mudarAbaGestor('nf')">🧾 NF</button>
     <button class="lider-tab"        id="gestor-tab-rel"  onclick="mudarAbaGestor('relatorios')">📊 Relatórios</button>
   </div>
 
@@ -1238,6 +1241,33 @@
         </div>
       </div><!-- fim sec-fat-diario -->
 
+    </div>
+
+    <!-- ══════════ ACOMPANHAMENTO DE NF (Commit 11) ══════════ -->
+    <div id="sec-nf" style="display:none">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">🧾 Acompanhamento de NF</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+          <div class="fg">
+            <label style="font-size:13px;font-weight:600">Mês</label>
+            <input type="month" id="nf-filtro-mes" onchange="onNFMudarMes()"
+              style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r2);font-family:'Inter',sans-serif;font-size:13px;outline:none;color:var(--text)" />
+          </div>
+          <div class="fg">
+            <label style="font-size:13px;font-weight:600">Status</label>
+            <select id="nf-filtro-status" onchange="renderAcompNF()"
+              style="padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r2);font-family:'Inter',sans-serif;font-size:13px;outline:none;color:var(--text)">
+              <option value="">Todas</option>
+              <option value="pendente">Pendentes</option>
+              <option value="emitida">Emitidas</option>
+            </select>
+          </div>
+        </div>
+        <div id="nf-resumo" style="font-size:13px;color:var(--text2)">—</div>
+      </div>
+      <div class="card">
+        <div id="nf-tabela"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+      </div>
     </div>
 
 
@@ -3718,7 +3748,7 @@ function iniciarApp() {
   document.getElementById("lider-nav").classList.toggle("show", ehLider);
   if(ehLider) {
     const saved = localStorage.getItem("as_aba_lider");
-    abaLider = ["lancamentos","metas","equipe","dashboard","orcamentos","relatorios"].includes(saved) ? saved : "metas";
+    abaLider = ["lancamentos","metas","equipe","dashboard","orcamentos","nf","relatorios"].includes(saved) ? saved : "metas";
     aplicarAbaLider();
   }
 
@@ -3726,7 +3756,7 @@ function iniciarApp() {
   document.getElementById("rec-nav").classList.toggle("show", ehRec);
   if(ehRec) {
     const saved = localStorage.getItem("as_aba_rec");
-    abaRec = ["lancamentos","metas","equipe","orcamentos"].includes(saved) ? saved : "metas";
+    abaRec = ["lancamentos","metas","equipe","orcamentos","nf"].includes(saved) ? saved : "metas";
     aplicarAbaRec();
   }
 
@@ -3735,7 +3765,7 @@ function iniciarApp() {
   document.getElementById("gestor-nav").classList.toggle("show", ehGestoraOuSub);
   if(ehGestoraOuSub) {
     const saved = localStorage.getItem("as_aba_gestor");
-    abaGestor = ["dashboard","orcamentos","relatorios"].includes(saved) ? saved : "dashboard";
+    abaGestor = ["dashboard","orcamentos","nf","relatorios"].includes(saved) ? saved : "dashboard";
     aplicarAbaGestor();
   }
 
@@ -3752,7 +3782,7 @@ function iniciarApp() {
     // Esconde TODAS as outras seções; deixa só Relatórios.
     // Financeiro não tem listeners (busca sob demanda no Gerar Relatório)
     // nem auto-refresh, nem botões de importação/feriado.
-    ["sec-orcamentos","sec-dashboard","sec-card-equipe",
+    ["sec-orcamentos","sec-nf","sec-dashboard","sec-card-equipe",
      "sec-metas","sec-lanc","sec-resumo","sec-tabela","sec-historico"]
       .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = "none"; });
     document.getElementById("sec-relatorios").style.display = "";
@@ -3938,12 +3968,13 @@ function aplicarAbaLider() {
   const emEquipe = abaLider === "equipe";
   const emDash   = abaLider === "dashboard";
   const emOrc    = abaLider === "orcamentos";
+  const emNF     = abaLider === "nf";
   const emRel    = abaLider === "relatorios";
 
-  ["lanc","metas","equipe","dash","orc","rel"].forEach(t => {
+  ["lanc","metas","equipe","dash","orc","nf","rel"].forEach(t => {
     const el = document.getElementById(`lider-tab-${t}`);
     if(!el) return;
-    const aba = t==="dash"?"dashboard":t==="lanc"?"lancamentos":t==="orc"?"orcamentos":t==="rel"?"relatorios":t;
+    const aba = t==="dash"?"dashboard":t==="lanc"?"lancamentos":t==="orc"?"orcamentos":t==="nf"?"nf":t==="rel"?"relatorios":t;
     el.classList.toggle("active", abaLider === aba);
   });
 
@@ -3955,9 +3986,11 @@ function aplicarAbaLider() {
   document.getElementById("sec-tabela").style.display      = emLanc   ? "" : "none";
   document.getElementById("sec-historico").style.display   = emLanc   ? "" : "none";
   document.getElementById("sec-orcamentos").style.display  = emOrc    ? "" : "none";
+  document.getElementById("sec-nf").style.display          = emNF     ? "" : "none";
   document.getElementById("sec-relatorios").style.display  = emRel    ? "" : "none";
 
   if(emOrc) renderKanbanOrcamentos();
+  if(emNF) iniciarListenerNF(); else pararListenerNF();
   if(emRel) iniciarRelatorios();
   if(!emDash && !unsubEquipe) iniciarListenerEquipe();
 }
@@ -3974,11 +4007,12 @@ function aplicarAbaRec() {
   const emMetas  = abaRec === "metas";
   const emEquipe = abaRec === "equipe";
   const emOrc    = abaRec === "orcamentos";
+  const emNF     = abaRec === "nf";
 
-  ["lanc","metas","equipe","orc"].forEach(t => {
+  ["lanc","metas","equipe","orc","nf"].forEach(t => {
     const el = document.getElementById(`rec-tab-${t}`);
     if(!el) return;
-    const aba = t==="lanc"?"lancamentos":t==="orc"?"orcamentos":t;
+    const aba = t==="lanc"?"lancamentos":t==="orc"?"orcamentos":t==="nf"?"nf":t;
     el.classList.toggle("active", abaRec === aba);
   });
 
@@ -3989,8 +4023,10 @@ function aplicarAbaRec() {
   document.getElementById("sec-metas").style.display       = emMetas  ? "" : "none";
   document.getElementById("sec-card-equipe").style.display = emEquipe ? "" : "none";
   document.getElementById("sec-orcamentos").style.display  = emOrc    ? "" : "none";
+  document.getElementById("sec-nf").style.display          = emNF     ? "" : "none";
 
   if(emOrc) renderKanbanOrcamentos();
+  if(emNF) iniciarListenerNF(); else pararListenerNF();
 }
 
 function mudarAbaRec(aba) {
@@ -4003,18 +4039,23 @@ function mudarAbaRec(aba) {
 function aplicarAbaGestor() {
   const emDash = abaGestor === "dashboard";
   const emOrc  = abaGestor === "orcamentos";
+  const emNF   = abaGestor === "nf";
   const emRel  = abaGestor === "relatorios";
 
   document.getElementById("gestor-tab-dash").classList.toggle("active", emDash);
   document.getElementById("gestor-tab-orc").classList.toggle("active",  emOrc);
+  const tabNF = document.getElementById("gestor-tab-nf");
+  if(tabNF) tabNF.classList.toggle("active", emNF);
   const tabRel = document.getElementById("gestor-tab-rel");
   if(tabRel) tabRel.classList.toggle("active", emRel);
 
   document.getElementById("sec-dashboard").style.display  = emDash ? "" : "none";
   document.getElementById("sec-orcamentos").style.display = emOrc  ? "" : "none";
+  document.getElementById("sec-nf").style.display         = emNF   ? "" : "none";
   document.getElementById("sec-relatorios").style.display = emRel  ? "" : "none";
 
   if(emOrc) renderKanbanOrcamentos();
+  if(emNF) iniciarListenerNF(); else pararListenerNF();
   if(emRel) iniciarRelatorios();
 }
 
@@ -9122,6 +9163,123 @@ function cardOrcamentoHTML(o) {
 // - Mudança entre não-pagos (acompanhar↔link_enviado↔lancar): confirm() simples + update.
 // - Status idêntico: no-op.
 // TODO D3.3: edge case "Pago → não-pago" (rebote) — deletar saída-doc-irmã, zerar pagamento.
+// ─────────────────────────────────────────────────────────────
+//  NF — Aba "Acompanhamento NF" (Commit 11)
+// ─────────────────────────────────────────────────────────────
+// Estado do listener da aba NF. nfMesAno = YYYY-MM corrente do filtro.
+let unsubNF = null;
+let nfMesAno = "";
+let nfDocs = [];
+
+// Inicia listener Firestore — chamado ao entrar na aba.
+// Filtra por mes_ano server-side; perfil + status filtrados no cliente.
+function iniciarListenerNF() {
+  pararListenerNF();
+  if(!nfMesAno) nfMesAno = getMesAno();
+  const input = document.getElementById("nf-filtro-mes");
+  if(input && !input.value) input.value = nfMesAno;
+
+  unsubNF = db.collection("lancamentos")
+    .where("mes_ano","==", nfMesAno)
+    .onSnapshot(snap => {
+      nfDocs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => l.excluido !== true);
+      renderAcompNF();
+    }, e => console.error("[NF] listener erro:", e));
+}
+
+function pararListenerNF() {
+  if(unsubNF) { unsubNF(); unsubNF = null; }
+}
+
+// Troca de mês no dropdown — reinicia listener
+function onNFMudarMes() {
+  const v = document.getElementById("nf-filtro-mes")?.value;
+  if(!v) return;
+  nfMesAno = v;
+  iniciarListenerNF();
+}
+
+// Renderiza tabela com filtros (perfil + status) aplicados no cliente.
+function renderAcompNF() {
+  const el = document.getElementById("nf-tabela");
+  const resumo = document.getElementById("nf-resumo");
+  if(!el) return;
+
+  // Só entradas (orçamentos). Saídas-doc com id_par não têm NF.
+  const entradas = nfDocs.filter(o => (o.tipo || "entrada") === "entrada");
+  // Filtragem por perfil (reusa lógica do kanban)
+  const porPerfil = filtrarOrcamentosPorPerfil(entradas);
+  // Filtro status do dropdown
+  const filtroStatus = document.getElementById("nf-filtro-status")?.value || "";
+  let lista = porPerfil;
+  if(filtroStatus === "pendente") lista = lista.filter(o => (o.nf_status || "pendente") === "pendente");
+  if(filtroStatus === "emitida")  lista = lista.filter(o => o.nf_status === "emitida");
+
+  // Contadores (sobre o conjunto antes do filtro de status)
+  const pendentes = porPerfil.filter(o => (o.nf_status || "pendente") === "pendente").length;
+  const emitidas  = porPerfil.filter(o => o.nf_status === "emitida").length;
+  if(resumo) resumo.textContent = `📊 Pendentes: ${pendentes} · Emitidas: ${emitidas} · Total: ${porPerfil.length}`;
+
+  if(!lista.length) {
+    el.innerHTML = `<div class="empty"><div class="ei">🧾</div>Nenhum orçamento encontrado.</div>`;
+    return;
+  }
+
+  // Ordenação: pendentes primeiro (urgência), depois emitidas; dentro de cada grupo desc por data_hora.
+  lista.sort((a,b) => {
+    const aPend = (a.nf_status || "pendente") === "pendente" ? 0 : 1;
+    const bPend = (b.nf_status || "pendente") === "pendente" ? 0 : 1;
+    if(aPend !== bPend) return aPend - bPend;
+    const ad = a.data_hora?.toMillis ? a.data_hora.toMillis() : 0;
+    const bd = b.data_hora?.toMillis ? b.data_hora.toMillis() : 0;
+    return bd - ad;
+  });
+
+  // Coluna Recep só pra liderança/gestão (recep não precisa — só vê próprios)
+  const mostraRecep = usuario && (SO_DASHBOARD.includes(usuario.perfil) || usuario.perfil === "lider");
+
+  const fmtData = ts => {
+    const d = ts?.toDate ? ts.toDate() : null;
+    if(!d) return "—";
+    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  };
+
+  const linhas = lista.map(o => {
+    const paciente = o.paciente_nome || o.paciente || "—";
+    const recep    = o.usuario_nome  || "—";
+    const valor    = Number(o.total) || Number(o.valor) || 0;
+    const badge    = nfBadgeHTML(o);
+    const num      = o.nf_status === "emitida" ? (o.nf_numero || "—") : "—";
+    return `<tr style="cursor:pointer" onclick="abrirModalOrcDet('${o.id}')">
+      <td style="padding:8px 10px;border-top:1px solid var(--border)">${fmtData(o.data_hora || o.criado_em)}</td>
+      <td style="padding:8px 10px;border-top:1px solid var(--border)"><strong>${escHTML(paciente)}</strong></td>
+      <td style="padding:8px 10px;border-top:1px solid var(--border);text-align:right">${brl(valor)}</td>
+      ${mostraRecep ? `<td style="padding:8px 10px;border-top:1px solid var(--border);color:var(--text2);font-size:12px">${escHTML(recep)}</td>` : ""}
+      <td style="padding:8px 10px;border-top:1px solid var(--border)">${badge}</td>
+      <td style="padding:8px 10px;border-top:1px solid var(--border);color:var(--text2);font-size:12px">${escHTML(String(num))}</td>
+    </tr>`;
+  }).join("");
+
+  const colRecepHead = mostraRecep ? `<th style="padding:10px;text-align:left;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Recep</th>` : "";
+
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr>
+            <th style="padding:10px;text-align:left;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Data</th>
+            <th style="padding:10px;text-align:left;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Paciente</th>
+            <th style="padding:10px;text-align:right;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Valor</th>
+            ${colRecepHead}
+            <th style="padding:10px;text-align:left;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Status NF</th>
+            <th style="padding:10px;text-align:left;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Número NF</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>`;
+}
+
 // ─────────────────────────────────────────────────────────────
 //  NF (Nota Fiscal) — Commit 10
 // ─────────────────────────────────────────────────────────────
