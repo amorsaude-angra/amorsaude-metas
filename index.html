@@ -9263,7 +9263,20 @@ function renderAcompNF() {
     const recep    = o.usuario_nome  || "—";
     const valor    = Number(o.total) || Number(o.valor) || 0;
     const badge    = nfBadgeHTML(o);
-    const num      = o.nf_status === "emitida" ? (o.nf_numero || "—") : "—";
+    // Célula "Número NF":
+    //  - Emitida: mostra o número.
+    //  - Pendente + sou o dono: mostra botão "Marcar".
+    //  - Pendente + não-dono (ex.: gestor que não criou): "—".
+    let celulaNum;
+    if(o.nf_status === "emitida") {
+      celulaNum = escHTML(String(o.nf_numero || "—"));
+    } else {
+      const ehDono = (usuario?.uid && o.usuario_id === usuario.uid)
+                  || (usuario?.nome && o.usuario_nome === usuario.nome);
+      celulaNum = ehDono
+        ? `<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();marcarNFEmitida('${o.id}')">🧾 Marcar</button>`
+        : "—";
+    }
     return `<tr style="cursor:pointer" onclick="abrirModalOrcDet('${o.id}')">
       <td style="padding:8px 10px;border-top:1px solid var(--border)">${fmtData(o.data_hora || o.criado_em)}</td>
       <td style="padding:8px 10px;border-top:1px solid var(--border)"><strong>${escHTML(paciente)}</strong></td>
@@ -9271,7 +9284,7 @@ function renderAcompNF() {
       <td style="padding:8px 10px;border-top:1px solid var(--border);text-align:right">${brl(valor)}</td>
       ${mostraRecep ? `<td style="padding:8px 10px;border-top:1px solid var(--border);color:var(--text2);font-size:12px">${escHTML(recep)}</td>` : ""}
       <td style="padding:8px 10px;border-top:1px solid var(--border)">${badge}</td>
-      <td style="padding:8px 10px;border-top:1px solid var(--border);color:var(--text2);font-size:12px">${escHTML(String(num))}</td>
+      <td style="padding:8px 10px;border-top:1px solid var(--border);color:var(--text2);font-size:12px">${celulaNum}</td>
     </tr>`;
   }).join("");
 
