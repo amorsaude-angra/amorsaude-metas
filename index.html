@@ -2942,6 +2942,17 @@ function _somarBoletoDoDoc(l) {
   return total;
 }
 
+// Verifica se um lançamento foi pago via boleto (qualquer schema).
+// Schema novo (>= Maio/2026): forma_pagamento_1/_2 === "boleto" (lowercase).
+// Schema legacy: forma_pagamento === "Boleto" (capitalizado).
+// Usado pela contagem de boletos do mês na premiação individual.
+function _ehLancBoleto(l) {
+  if(!l || l.tipo !== "entrada") return false;
+  return l.forma_pagamento_1 === "boleto"
+      || l.forma_pagamento_2 === "boleto"
+      || l.forma_pagamento === "Boleto";  // legacy
+}
+
 // Agrega lancamentos pagos do mês (+ saídas vinculadas via id_par) nas mesmas
 // categorias do dashboard. Reusa calcTotaisDetalhados (Fase A — já trata schema novo).
 // Boleto é extraído de forma_pagamento_* (campo `boleto` do doc é sempre 0
@@ -4161,7 +4172,7 @@ function atualizarCards() {
   }
   const metaCaixa   = metas.meta_caixa_recepcao||0;
   const metaCredito = metas.meta_credito_recepcao||0;
-  const contBoleto  = lancMes.filter(l => l.tipo==="entrada" && l.forma_pagamento==="Boleto").length;
+  const contBoleto  = lancMes.filter(_ehLancBoleto).length;
 
   console.log(`[Amor Saúde] Totais — Perfil: ${perfil} | Caixa: ${caixa.toFixed(2)} | Crédito: ${credito.toFixed(2)} | MetaCaixa: ${metaCaixa} | MetaCredito: ${metaCredito} | Boletos: ${contBoleto} | Qtd lançamentos: ${lancMes.length}`);
 
@@ -5290,7 +5301,7 @@ function renderTabelaPremiacao() {
   // Em Angra a única premiação individual restante é a de Boleto. Caixa,
   // Crédito, Lab, Imagem, Procedimentos agora são premiações coletivas
   // (renderizadas em #card-prem-coletiva-metas pelo renderPremColetiva).
-  const contBoleto = lancMes.filter(l => l.tipo === "entrada" && l.forma_pagamento === "Boleto").length;
+  const contBoleto = lancMes.filter(_ehLancBoleto).length;
   el.innerHTML = _tabPremBlocoBoleto(contBoleto);
 }
 
