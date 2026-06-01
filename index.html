@@ -1087,6 +1087,9 @@
         <div id="dash-ranking"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
       </div>
 
+      <!-- Premiação Coletiva (Angra) — visível pra gestores; recep/Gabriel veem em sec-metas -->
+      <div class="card card-prem-coletiva" id="card-prem-coletiva-dash" style="margin-bottom:20px"></div>
+
       <!-- Painel de Premiações Pagas -->
       <div class="card" style="margin-bottom:20px" id="card-premiacao-equipe">
         <div class="card-title">💰 Premiações</div>
@@ -1263,6 +1266,9 @@
         <div id="card-prem" class="card-prem"></div>
         <div id="card-dia" class="card-dia"></div>
       </div>
+
+      <!-- Premiação Coletiva (Angra) — visível pra recep + Gabriel; gestores veem em sec-dashboard -->
+      <div class="card card-prem-coletiva" id="card-prem-coletiva-metas" style="margin-bottom:20px"></div>
 
       <div class="card-proj" id="card-proj">
         <div class="proj-ico">📈</div>
@@ -3308,6 +3314,113 @@ function parcelaCaixaRecep(valorCaixa) {
   return ((Number(valorCaixa) || 0) * (1 - PREM_COLETIVA_CAIXA_PCT_COORD)) / numRecep;
 }
 
+// ═══════════════════════════════════════════════════════════
+//  PREMIAÇÃO COLETIVA — render do card (Angra)
+// ═══════════════════════════════════════════════════════════
+// Renderiza o card de premiação coletiva no container especificado.
+// 4 variantes por perfil:
+//   - afastada: card vazio (defesa em profundidade)
+//   - gestor (SO_DASHBOARD): total da equipe + detalhamento por ativo
+//   - coordenador (Gabriel, email == PREM_COLETIVA_COORDENADOR): parcela própria + total da equipe
+//   - recepcionista (demais ativos): só parcela própria
+// Não-ativo não-gestor (ex.: financeiro): card vazio.
+function renderPremColetiva(containerId, lancs, mesAnoArg, meta) {
+  const el = document.getElementById(containerId);
+  if(!el || !usuario) return;
+
+  const email = usuario.email || "";
+
+  // Defesa em profundidade — afastadas não veem (segunda checagem após status)
+  if(isAfastada(email)) { el.innerHTML = ""; return; }
+
+  const ehGestao = SO_DASHBOARD.includes(usuario.perfil);
+  const ehCoord  = email === PREM_COLETIVA_COORDENADOR;
+  const ehAtivo  = PREM_COLETIVA_ATIVOS.includes(email);
+
+  // Quem não é gestão nem está nos ativos não vê (financeiro etc.)
+  if(!ehGestao && !ehAtivo) { el.innerHTML = ""; return; }
+
+  const totaisEquipe   = agregarTotaisEquipeLancs(lancs || []);
+  const caixaRealizado = Number(meta?.caixa_realizado_equipe) || 0;
+  const entregouLucro  = !!meta?.entregou_lucro;
+  const prem = calcularPremiacaoColetiva(totaisEquipe, meta, caixaRealizado, entregouLucro);
+
+  const titulo = `🎁 Premiação Coletiva — ${labelMes(mesAnoArg)}`;
+
+  // Linha "Produtos" — parcela do usuário corrente (recep/coord)
+  function linhaProdutosPropria() {
+    if(!prem.produtosCalculado) return `Produtos: <span style="color:var(--text2)">— Aguardando configuração de metas</span>`;
+    if(prem.valorProdutos <= 0)  return `Produtos: <span style="color:var(--text2)">Sem premiação este mês</span>`;
+    return `Produtos: <strong>${brl(parcelaProdutos(prem.valorProdutos))}</strong>`;
+  }
+
+  // Linha "Caixa" — coord usa parcelaCaixaCoord; recep usa parcelaCaixaRecep
+  function linhaCaixaPropria() {
+    if(!prem.caixaCalculado)  return `Caixa: <span style="color:var(--text2)">— Aguardando configuração de metas</span>`;
+    if(caixaRealizado <= 0)   return `Caixa: <span style="color:var(--text2)">Aguardando fechamento de caixa</span>`;
+    if(prem.valorCaixa <= 0)  return `Caixa: <span style="color:var(--text2)">Sem premiação este mês</span>`;
+    const valor = ehCoord ? parcelaCaixaCoord(prem.valorCaixa) : parcelaCaixaRecep(prem.valorCaixa);
+    return `Caixa: <strong>${brl(valor)}</strong>`;
+  }
+
+  function totalPropria() {
+    const parcP = prem.produtosCalculado ? parcelaProdutos(prem.valorProdutos) : 0;
+    const parcC = prem.caixaCalculado
+      ? (ehCoord ? parcelaCaixaCoord(prem.valorCaixa) : parcelaCaixaRecep(prem.valorCaixa))
+      : 0;
+    return parcP + parcC;
+  }
+
+  let body = "";
+
+  if(ehGestao) {
+    const linhasDet = PREM_COLETIVA_ATIVOS.map(ativoEmail => {
+      const nome  = USUARIOS[ativoEmail]?.nome || ativoEmail;
+      const valor = _parcelaTotalPara(ativoEmail, prem);
+      return `<div style="display:flex;justify-content:space-between;padding:4px 0">
+        <span>${escHTML(nome)}:</span>
+        <strong>${brl(valor)}</strong>
+      </div>`;
+    }).join("");
+    body = `
+      <div style="font-size:14px;margin-bottom:8px">Total da equipe: <strong>${brl(prem.totalEquipe)}</strong></div>
+      <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:6px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">Detalhamento</div>
+        ${linhasDet}
+      </div>`;
+  } else if(ehCoord) {
+    body = `
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">Sua parcela</div>
+      <div style="font-size:14px;margin-bottom:4px">${linhaProdutosPropria()}</div>
+      <div style="font-size:14px;margin-bottom:4px">${linhaCaixaPropria()}</div>
+      <div style="font-size:14px;margin-top:6px">Total: <strong>${brl(totalPropria())}</strong></div>
+      <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;font-size:14px">
+        Total da equipe: <strong>${brl(prem.totalEquipe)}</strong>
+      </div>`;
+  } else {
+    // recepcionista (ativo, não-coord, não-gestor)
+    body = `
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">Sua parcela</div>
+      <div style="font-size:14px;margin-bottom:4px">${linhaProdutosPropria()}</div>
+      <div style="font-size:14px;margin-bottom:4px">${linhaCaixaPropria()}</div>
+      <div style="font-size:14px;margin-top:6px">Total: <strong>${brl(totalPropria())}</strong></div>`;
+  }
+
+  el.innerHTML = `<div class="card-title">${titulo}</div>${body}`;
+}
+
+// Soma das parcelas (produtos + caixa) de um ativo. Usado pelo detalhamento
+// da variante gestor. Coordenador usa parcelaCaixaCoord; demais ativos usam
+// parcelaCaixaRecep.
+function _parcelaTotalPara(email, prem) {
+  const parcP = prem.produtosCalculado ? parcelaProdutos(prem.valorProdutos) : 0;
+  const ehCoord = email === PREM_COLETIVA_COORDENADOR;
+  const parcC = prem.caixaCalculado
+    ? (ehCoord ? parcelaCaixaCoord(prem.valorCaixa) : parcelaCaixaRecep(prem.valorCaixa))
+    : 0;
+  return parcP + parcC;
+}
+
 function toast(msg, tipo="ok") {
   const t = document.getElementById("toast");
   t.textContent = msg; t.className = `show ${tipo}`;
@@ -4072,6 +4185,8 @@ function atualizarCards() {
   atualizarMetaDiaria(caixa, metaCaixa);
   atualizarResumoDia();
   renderTabelaPremiacao();
+  // Premiação Coletiva (Angra) — usa equipeLancs do mês corrente
+  renderPremColetiva("card-prem-coletiva-metas", equipeLancs, mesAno, metas);
   if(metaCaixa > 0) {
     const mm = metas || {};
     const teamTot = historicoEquipeAtual.length > 0
@@ -5815,6 +5930,7 @@ function iniciarListenerEquipe() {
     .onSnapshot(snap => {
       equipeLancs = snap.docs.map(d => ({id:d.id,...d.data()})).filter(l => l.excluido !== true);
       renderCardMetasEquipe();
+      renderPremColetiva("card-prem-coletiva-metas", equipeLancs, mesAno, metas);
     }, e => console.error("equipe listener:", e));
 }
 
@@ -6198,6 +6314,8 @@ function renderDashboard() {
   renderDashSaidasAvulsas();
   renderDashColaboradoras(lista);
   renderPrescritores();
+  // Premiação Coletiva (Angra) — usa dashLancs do mês filtrado no Dashboard
+  renderPremColetiva("card-prem-coletiva-dash", dashLancs, dashMesAno, dashMetasMes);
 }
 
 // ── Dashboard histórico (dados de historico_mensal) ───────────
