@@ -2082,6 +2082,17 @@
         <label>Meta Injetáveis (R$)</label>
         <input type="text" id="mm-injetaveis" placeholder="0,00" oninput="mascaraValor(this)" />
       </div>
+      <div class="modal-sec-label">Fechamento do Mês</div>
+      <div class="fg">
+        <label>Caixa Realizado — Equipe (R$)</label>
+        <input type="text" id="mm-caixa-realizado-equipe" placeholder="0,00" oninput="mascaraValor(this)" />
+      </div>
+      <div class="fg">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="mm-entregou-lucro" />
+          <span>Entregou lucro este mês?</span>
+        </label>
+      </div>
     </div>
     <div class="modal-btns" style="margin-top:24px">
       <button class="btn btn-ghost" onclick="fecharModalMetas()">Cancelar</button>
@@ -8139,6 +8150,11 @@ function abrirModalMetas() {
   set("mm-img",              m.meta_img_equipe        || 0);
   set("mm-proc",             m.meta_proc_equipe       || 0);
   set("mm-injetaveis",       m.meta_injetaveis_equipe || 0);
+  set("mm-caixa-realizado-equipe", m.caixa_realizado_equipe || 0);
+
+  // Checkbox tem manuseio próprio (set() é pra inputs numéricos)
+  const checkLucro = document.getElementById("mm-entregou-lucro");
+  if(checkLucro) checkLucro.checked = !!m.entregou_lucro;
 
   document.getElementById("modal-metas").classList.remove("hidden");
 }
@@ -8162,6 +8178,10 @@ async function salvarModalMetas() {
     meta_img_equipe:            get("mm-img"),
     meta_proc_equipe:           get("mm-proc"),
     meta_injetaveis_equipe:     get("mm-injetaveis"),
+    // Premiação coletiva (Commit 2/5): caixa realizado é sanitizado a >= 0;
+    // entregou_lucro vira false se checkbox não existir (defesa contra DOM ausente).
+    caixa_realizado_equipe: Math.max(0, get("mm-caixa-realizado-equipe")),
+    entregou_lucro:         !!document.getElementById("mm-entregou-lucro")?.checked,
   };
 
   const alvo = dashMesAno || getMesAno();
