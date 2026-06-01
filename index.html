@@ -1262,6 +1262,7 @@
               <option value="emitida">Emitidas</option>
             </select>
           </div>
+          <button class="btn btn-primary" style="width:auto;margin-left:auto" onclick="exportarNFCSV()">📥 Exportar Excel</button>
         </div>
         <div id="nf-resumo" style="font-size:13px;color:var(--text2)">—</div>
       </div>
@@ -9229,10 +9230,16 @@ function renderAcompNF() {
   if(filtroStatus === "pendente") lista = lista.filter(o => (o.nf_status || "pendente") === "pendente");
   if(filtroStatus === "emitida")  lista = lista.filter(o => o.nf_status === "emitida");
 
-  // Contadores (sobre o conjunto antes do filtro de status)
-  const pendentes = porPerfil.filter(o => (o.nf_status || "pendente") === "pendente").length;
-  const emitidas  = porPerfil.filter(o => o.nf_status === "emitida").length;
-  if(resumo) resumo.textContent = `📊 Pendentes: ${pendentes} · Emitidas: ${emitidas} · Total: ${porPerfil.length}`;
+  // Contadores + valores (sobre o conjunto antes do filtro de status)
+  const pendentesArr = porPerfil.filter(o => (o.nf_status || "pendente") === "pendente");
+  const emitidasArr  = porPerfil.filter(o => o.nf_status === "emitida");
+  const somarValor = arr => arr.reduce((s, o) => s + (Number(o.total) || Number(o.valor) || 0), 0);
+  const valorPend = somarValor(pendentesArr);
+  const valorEmit = somarValor(emitidasArr);
+  if(resumo) resumo.textContent =
+    `📊 Pendentes: ${pendentesArr.length} (${brl(valorPend)}) · `
+    + `Emitidas: ${emitidasArr.length} (${brl(valorEmit)}) · `
+    + `Total: ${porPerfil.length} (${brl(valorPend + valorEmit)})`;
 
   if(!lista.length) {
     el.innerHTML = `<div class="empty"><div class="ei">🧾</div>Nenhum orçamento encontrado.</div>`;
@@ -9307,6 +9314,85 @@ function renderAcompNF() {
         <tbody>${linhas}</tbody>
       </table>
     </div>`;
+}
+
+// Exporta a tabela atual em CSV (UTF-8 com BOM). Aplica os MESMOS filtros
+// e ordenação da tabela renderizada — mês + status + perfil.
+// Valor: número decimal com vírgula ("60,00"). Excel pt-BR interpreta como moeda.
+function exportarNFCSV() {
+  // Mesma cadeia de filtros da renderAcompNF
+  const entradas = nfDocs.filter(o => (o.tipo || "entrada") === "entrada");
+  const porPerfil = filtrarOrcamentosPorPerfil(entradas);
+  const filtroStatus = document.getElementById("nf-filtro-status")?.value || "";
+  let lista = porPerfil;
+  if(filtroStatus === "pendente") lista = lista.filter(o => (o.nf_status || "pendente") === "pendente");
+  if(filtroStatus === "emitida")  lista = lista.filter(o => o.nf_status === "emitida");
+
+  if(!lista.length) { toast("Nenhum dado para exportar.","err"); return; }
+
+  // Mesma ordenação: pendentes primeiro, depois desc por data_hora
+  lista.sort((a,b) => {
+    const aPend = (a.nf_status || "pendente") === "pendente" ? 0 : 1;
+    const bPend = (b.nf_status || "pendente") === "pendente" ? 0 : 1;
+    if(aPend !== bPend) return aPend - bPend;
+    const ad = a.data_hora?.toMillis ? a.data_hora.toMillis() : 0;
+    const bd = b.data_hora?.toMillis ? b.data_hora.toMillis() : 0;
+    return bd - ad;
+  });
+
+  const mostraRecep = usuario && (SO_DASHBOARD.includes(usuario.perfil) || usuario.perfil === "lider");
+
+  // CSV escape (RFC 4180): vírgula/quebra-linha/aspas → envolto em aspas; aspas internas dobradas
+  const esc = v => {
+    const s = String(v == null ? "" : v);
+    if(/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  const fmtData = ts => {
+    const d = ts?.toDate ? ts.toDate() : null;
+    if(!d) return "";
+    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  };
+  const fmtValor = n => Number(n).toFixed(2).replace(".", ",");
+
+  // Header dinâmico (Recep só pra liderança/gestão)
+  const header = ["Data","Paciente","CPF","Valor"];
+  if(mostraRecep) header.push("Recep");
+  header.push("Status NF","Número NF");
+
+  const rows = lista.map(o => {
+    const paciente = o.paciente_nome || o.paciente || "";
+    const cpfFmt   = formatCPF(o.paciente_cpf);
+    const cpf      = cpfFmt === "—" ? "" : cpfFmt;
+    const valor    = Number(o.total) || Number(o.valor) || 0;
+    const recep    = o.usuario_nome || "";
+    const statusNF = o.nf_status === "emitida" ? "Emitida" : "Pendente";
+    const numNF    = o.nf_status === "emitida" ? (o.nf_numero || "") : "";
+    const cols = [fmtData(o.data_hora || o.criado_em), paciente, cpf, fmtValor(valor)];
+    if(mostraRecep) cols.push(recep);
+    cols.push(statusNF, numNF);
+    return cols.map(esc).join(",");
+  });
+
+  // BOM UTF-8 + CRLF entre linhas (compat Excel Windows)
+  const csv = "﻿" + [header.map(esc).join(","), ...rows].join("\r\n");
+
+  // Nome: amorsaude-nf-{mes-portugues}-{YYYY-MM-DD-hoje}.csv
+  const [ano, mesNum] = (nfMesAno || "").split("-");
+  const meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  const mesNome = meses[Number(mesNum) - 1] || mesNum || "mes";
+  const hoje = new Date();
+  const todayISO = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,"0")}-${String(hoje.getDate()).padStart(2,"0")}`;
+  const filename = `amorsaude-nf-${mesNome}-${todayISO}.csv`;
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  toast(`Exportadas ${lista.length} linha${lista.length !== 1 ? "s" : ""}.`,"ok");
 }
 
 // ─────────────────────────────────────────────────────────────
