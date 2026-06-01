@@ -2646,6 +2646,49 @@ const FAIXAS_POOL_PROC   = [{pct:1.0,pool:500}, {pct:0.9,pool:375}, {pct:0.8,poo
 // Crédito vigente apenas a partir de MARCO_NOVO_MODELO ("2026-05") — não-retroativo.
 const FAIXAS_POOL_CRED   = [{pct:1.0,pool:500}, {pct:0.9,pool:375}, {pct:0.8,pool:250}];
 
+// ═══════════════════════════════════════════════════════════
+//  PREMIAÇÃO COLETIVA (Angra · estreia 2026-06)
+// ═══════════════════════════════════════════════════════════
+// Feature distinta do pool por categoria acima (FAIXAS_POOL_*).
+// Produtos: bate 80/90/100% das 3 metas (lab, img, proc) → faixa exclusiva,
+//   valor total dividido em 4 partes iguais entre PREM_COLETIVA_ATIVOS.
+// Caixa: % do realizado se realizado >= meta_caixa_equipe.
+//   1% se entregou lucro, 0,5% se não. Coordenador (Gabriel) leva 50%;
+//   recepcionistas dividem os outros 50% em 3.
+const PREM_COLETIVA_ATIVOS = [
+  "gsantospereira90@gmail.com",        // Gabriel (coordenador)
+  "yasminoliveira2404@icloud.com",     // Yasmin Oliveira
+  "leticia.eleoterio23@gmail.com",     // Letícia
+  "gabrielacardosorocharj@gmail.com",  // Gabriela
+];
+
+// Defesa em profundidade: Yasmin Pimentel está afastada e será desativada
+// no Firebase Auth Console manualmente (não logará). Se por algum motivo
+// logar, isAfastada() garante que o card NÃO renderiza pra ela.
+const PREM_COLETIVA_AFASTADAS = [
+  "yasmin.pimentel@hotmail.com",
+];
+
+const PREM_COLETIVA_COORDENADOR = "gsantospereira90@gmail.com";  // Gabriel
+
+// Faixas exclusivas (avaliadas 100→90→80; primeira que bate define o total).
+const PREM_COLETIVA_FAIXAS_PRODUTOS = [
+  { limiar: 1.00, valorTotal: 700 },
+  { limiar: 0.90, valorTotal: 500 },
+  { limiar: 0.80, valorTotal: 400 },
+];
+
+const PREM_COLETIVA_CAIXA_PCT_LUCRO     = 0.01;
+const PREM_COLETIVA_CAIXA_PCT_SEM_LUCRO = 0.005;
+const PREM_COLETIVA_CAIXA_PCT_COORD     = 0.50;
+
+// Retorna true se o email está na lista de afastadas (não renderiza card).
+// Coexiste com ehAfastada(nome) (linha ~2298, lê USUARIOS[email].status).
+// Defense-in-depth — checagem dupla por design.
+function isAfastada(email) {
+  return PREM_COLETIVA_AFASTADAS.includes(email || "");
+}
+
 
 
 
