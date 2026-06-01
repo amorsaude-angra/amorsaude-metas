@@ -3156,8 +3156,8 @@ function diasUteisRestantes() {
 
 // Premiação de boleto individual (qtd. de boletos efetivados no mês)
 function calcPremBoleto(contBoleto) {
-  if(contBoleto >= 5) return contBoleto * 25;
-  if(contBoleto >= 3) return contBoleto * 15;
+  if(contBoleto >= 7) return contBoleto * 20;
+  if(contBoleto >= 4) return contBoleto * 15;
   if(contBoleto >= 1) return contBoleto * 10;
   return 0;
 }
@@ -5160,12 +5160,12 @@ function _tabPremFaixaLinha(label, valorLabel, status, extraDireita) {
   </div>`;
 }
 
-// Bloco "🧾 Boleto" — 3 faixas por quantidade (1-2 / 3-4 / 5+).
+// Bloco "🧾 Boleto" — 3 faixas por quantidade (1-3 / 4-6 / 7+).
 function _tabPremBlocoBoleto(contBoleto) {
   const faixas = [
-    { label:"1-2 boletos", min:1, mult:10 },
-    { label:"3-4 boletos", min:3, mult:15 },
-    { label:"5+ boletos",  min:5, mult:25 },
+    { label:"1-3 boletos", min:1, mult:10 },
+    { label:"4-6 boletos", min:4, mult:15 },
+    { label:"7+ boletos",  min:7, mult:20 },
   ];
   let idxAtingida = -1;
   faixas.forEach((f,i) => { if(contBoleto >= f.min) idxAtingida = i; });
