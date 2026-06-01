@@ -1354,6 +1354,18 @@
                 onclick="addLinhaProcEntrada()">➕ Adicionar procedimento</button>
             </div>
 
+            <!-- NF (Nota Fiscal) — Commit 10 -->
+            <div class="fg full" style="border-top:1px dashed var(--border);padding-top:14px;margin-top:6px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+                <input type="checkbox" id="e-nf-emitida" onchange="toggleNFEntrada()" />
+                🧾 NF já foi emitida?
+              </label>
+              <div id="e-nf-numero-wrap" style="display:none;margin-top:8px;padding-left:14px;border-left:2px solid var(--border)">
+                <label style="font-size:13px">Número da NF *</label>
+                <input type="text" id="e-nf-numero" placeholder="Ex: 12345" />
+              </div>
+            </div>
+
             <!-- Total auto-calculado -->
             <div class="fg full">
               <label>Total (R$)</label>
@@ -4586,6 +4598,10 @@ function resetFormEntrada() {
   // Status default = Pago (e bloco de pagamento visível)
   const radPago = document.querySelector('input[name="e-status"][value="pago"]');
   if(radPago) radPago.checked = true;
+  // Reset NF (Commit 10)
+  const cbNF = document.getElementById("e-nf-emitida");
+  if(cbNF) { cbNF.checked = false; toggleNFEntrada(); }
+  set("e-nf-numero", "");
   togglePagamentoPorStatus();
 }
 
@@ -4649,6 +4665,11 @@ async function salvarEntrada() {
       toast("Descreva qual procedimento (campo 'Outros').","err"); return;
     }
   }
+
+  // NF (Nota Fiscal) — Commit 10
+  const nfEmitida = !!document.getElementById("e-nf-emitida")?.checked;
+  const nfNumero  = (document.getElementById("e-nf-numero")?.value || "").trim();
+  if(nfEmitida && !nfNumero) { toast("Informe o número da NF.","err"); return; }
 
   // Forma de pagamento: obrigatória SOMENTE se status === "pago".
   // Para status≠"pago" (Acompanhar/Lançar/Link Enviado), o paciente ainda
@@ -4765,6 +4786,10 @@ async function salvarEntrada() {
     // Status do kanban / faturamento
     status: status || "pago",
     mes_ano: getMesAno(),
+    // NF (Nota Fiscal) — Commit 10
+    nf_status:     nfEmitida ? "emitida" : "pendente",
+    nf_numero:     nfEmitida ? nfNumero : null,
+    nf_emitida_em: nfEmitida ? firebase.firestore.FieldValue.serverTimestamp() : null,
     data_hora: firebase.firestore.FieldValue.serverTimestamp(),
     criado_em: firebase.firestore.FieldValue.serverTimestamp(),
   };
@@ -4844,6 +4869,13 @@ function toggleSaidaEmbutidaEntrada() {
   const wrap = document.getElementById("e-saida-wrap");
   if(wrap) wrap.style.display = cb && cb.checked ? "" : "none";
   if(cb && cb.checked) recalcDescontoEntrada();
+}
+
+// Toggle do bloco "Número da NF" no form de Entrada — Commit 10
+function toggleNFEntrada() {
+  const cb = document.getElementById("e-nf-emitida");
+  const wrap = document.getElementById("e-nf-numero-wrap");
+  if(wrap) wrap.style.display = cb && cb.checked ? "" : "none";
 }
 
 // Toggle da seção "Saída embutida" no form de Orçamento
@@ -8956,11 +8988,13 @@ function cardPagoHTML(o) {
         💳 ${escHTML(formaLabel)}<br>
         🕒 ${dataCurta} · ${escHTML(quemFez)}
       </div>
+      <div style="margin-top:6px">${nfBadgeHTML(o)}</div>
       <div class="orc-card-acao" onclick="event.stopPropagation()">
         <button class="btn-reverter-pagamento" onclick="confirmarReverterPagamento('${o.id}')">
           ↩️ Reverter pagamento
         </button>
         ${btnEditarHTML(o)}
+        ${nfBotaoMarcarHTML(o)}
       </div>
     </div>`;
 }
@@ -9040,6 +9074,7 @@ function cardRecusadoHTML(o) {
       <div class="orc-recusa-tag">
         ❌ <strong>${escHTML(motivo)}</strong>${obsTrunc ? `: ${escHTML(obsTrunc)}` : ""}
       </div>
+      <div style="margin-top:6px">${nfBadgeHTML(o)}</div>
       <div class="orc-card-acao" onclick="event.stopPropagation()">
         <select onchange="mudarStatusOrcamento('${o.id}', this.value)">${opts}</select>
       </div>
@@ -9072,9 +9107,11 @@ function cardOrcamentoHTML(o) {
         ${medico ? `🩺 ${escHTML(medico)}<br>` : ""}
         🕒 ${dataCurta} · ${escHTML(quemFez)}
       </div>
+      <div style="margin-top:6px">${nfBadgeHTML(o)}</div>
       <div class="orc-card-acao" onclick="event.stopPropagation()">
         <select onchange="mudarStatusOrcamento('${o.id}', this.value)">${opts}</select>
         ${btnEditarHTML(o)}
+        ${nfBotaoMarcarHTML(o)}
       </div>
     </div>`;
 }
@@ -9085,6 +9122,50 @@ function cardOrcamentoHTML(o) {
 // - Mudança entre não-pagos (acompanhar↔link_enviado↔lancar): confirm() simples + update.
 // - Status idêntico: no-op.
 // TODO D3.3: edge case "Pago → não-pago" (rebote) — deletar saída-doc-irmã, zerar pagamento.
+// ─────────────────────────────────────────────────────────────
+//  NF (Nota Fiscal) — Commit 10
+// ─────────────────────────────────────────────────────────────
+// Badge visual do status da NF no card de orçamento.
+// Docs antigos sem nf_status são tratados como "pendente" (default seguro).
+function nfBadgeHTML(o) {
+  const status = o.nf_status || "pendente";
+  if(status === "emitida") {
+    const num = o.nf_numero ? `#${escHTML(String(o.nf_numero))}` : "";
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;background:#D1FAE5;color:#065F46">🧾 NF emitida ${num}</span>`;
+  }
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;background:#FEF3C7;color:#B45309">🧾 NF pendente</span>`;
+}
+
+// Botão "Marcar NF emitida" — só renderiza se nf_status != emitida.
+function nfBotaoMarcarHTML(o) {
+  const status = o.nf_status || "pendente";
+  if(status === "emitida") return "";
+  return `<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();marcarNFEmitida('${o.id}')">🧾 Marcar NF</button>`;
+}
+
+// Pede número da NF via prompt e grava em lancamentos/{id}.
+// Regras Firestore já permitem dono editar (criado_por_uid == auth.uid) +
+// liderança (gestor/subgestora/lider).
+async function marcarNFEmitida(id) {
+  if(!usuario) { toast("Sessão expirada.","err"); return; }
+  const numero = window.prompt("Número da NF emitida:");
+  if(numero == null) return;
+  const trim = String(numero).trim();
+  if(!trim) { toast("Número da NF não pode ficar vazio.","err"); return; }
+  try {
+    await db.collection("lancamentos").doc(id).update({
+      nf_status: "emitida",
+      nf_numero: trim,
+      nf_emitida_em: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizado_em: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    toast("NF marcada como emitida.","ok");
+  } catch(e) {
+    console.error("[marcarNFEmitida]", e);
+    toast("Erro ao marcar NF: " + (e.message || e.code), "err");
+  }
+}
+
 async function mudarStatusOrcamento(id, novoStatus) {
   if(!["acompanhar","link_enviado","lancar","pago","recusado"].includes(novoStatus)) return;
   if(!usuario) { toast("Sessão expirada.","err"); return; }
