@@ -3168,6 +3168,20 @@ function mascaraCPF(el) {
   el.value = v;
 }
 
+// Formato pure de CPF pra exibição. Aceita string já formatada (preserva),
+// 11 dígitos puros (formata XXX.XXX.XXX-XX), ou vazio (retorna "—").
+function formatCPF(raw) {
+  if(!raw) return "—";
+  const s = String(raw).trim();
+  if(!s) return "—";
+  if(/[.\-]/.test(s)) return s;  // já formatado
+  const digitos = s.replace(/\D/g, "");
+  if(digitos.length === 11) {
+    return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  }
+  return s;  // formato desconhecido, retorna como está
+}
+
 function mascaraValor(el) {
   let v = el.value.replace(/\D/g,"");
   if(!v){el.value="";return;}
@@ -9253,6 +9267,7 @@ function renderAcompNF() {
     return `<tr style="cursor:pointer" onclick="abrirModalOrcDet('${o.id}')">
       <td style="padding:8px 10px;border-top:1px solid var(--border)">${fmtData(o.data_hora || o.criado_em)}</td>
       <td style="padding:8px 10px;border-top:1px solid var(--border)"><strong>${escHTML(paciente)}</strong></td>
+      <td style="padding:8px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)">${escHTML(formatCPF(o.paciente_cpf))}</td>
       <td style="padding:8px 10px;border-top:1px solid var(--border);text-align:right">${brl(valor)}</td>
       ${mostraRecep ? `<td style="padding:8px 10px;border-top:1px solid var(--border);color:var(--text2);font-size:12px">${escHTML(recep)}</td>` : ""}
       <td style="padding:8px 10px;border-top:1px solid var(--border)">${badge}</td>
@@ -9269,6 +9284,7 @@ function renderAcompNF() {
           <tr>
             <th style="padding:10px;text-align:left;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Data</th>
             <th style="padding:10px;text-align:left;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Paciente</th>
+            <th style="padding:10px;text-align:left;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">CPF</th>
             <th style="padding:10px;text-align:right;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Valor</th>
             ${colRecepHead}
             <th style="padding:10px;text-align:left;background:var(--bg2);font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px">Status NF</th>
