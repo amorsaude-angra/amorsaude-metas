@@ -1090,12 +1090,6 @@
       <!-- Premiação Coletiva (Angra) — visível pra gestores; recep/Gabriel veem em sec-metas -->
       <div class="card card-prem-coletiva" id="card-prem-coletiva-dash" style="margin-bottom:20px"></div>
 
-      <!-- Painel de Premiações Pagas -->
-      <div class="card" style="margin-bottom:20px" id="card-premiacao-equipe">
-        <div class="card-title">💰 Premiações</div>
-        <div id="dash-premiacao"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
-      </div>
-
       <!-- Saídas Avulsas (informativo — não desconta caixa a partir de Maio/2026) -->
       <div class="card" id="card-dash-saidas" style="margin-bottom:20px;display:none">
         <div class="card-title">💸 Saídas Avulsas <span style="font-size:11px;font-weight:600;color:var(--text2);margin-left:8px">informativo · não desconta caixa</span></div>
@@ -5199,87 +5193,36 @@ function renderHistorico(lista, dataSel) {
 // ═══════════════════════════════════════════════════════════
 //  CARD PREMIAÇÃO
 // ═══════════════════════════════════════════════════════════
+// Card-prem reduzido (pós Commit 5): só Boleto + projeção.
+// Caixa/Lab/Img/Proc/Cred individuais foram absorvidos pelo card de Premiação Coletiva.
+// Assinatura preservada (caixa, credito, metaCaixa, metaCredito, perfil) pra não
+// quebrar o call site em atualizarCards() — params ficam ignorados.
 function atualizarCardPremiacao(caixa, credito, metaCaixa, metaCredito, perfil, contBoleto) {
   const el = document.getElementById("card-prem");
   if(!el) return;
 
-  // Recepcionista / Lider: premiação detalhada com pool coletivo
-  // TODO: configurar metas de Angra
-  const m          = metas || {};
-  const metaLab    = m.meta_lab_equipe          || 0;
-  const metaImg    = m.meta_img_equipe          || 0;
-  const metaProc   = m.meta_proc_equipe         || 0;
-  const metaCred   = m.meta_credito_equipe      || METAS_EQUIPE_PADRAO.meta_credito_equipe;
-  const diasUteis  = m.dias_uteis               || 22;
-  const diasPassF  = diasUteisPassadosFloat();
-  // Pool de Crédito vigente apenas a partir do marco (Maio/2026).
-  const credVig    = mesAno >= MARCO_NOVO_MODELO;
+  const m         = metas || {};
+  const diasUteis = m.dias_uteis || 22;
+  const diasPassF = diasUteisPassadosFloat();
 
-  const teamTot = historicoEquipeAtual.length > 0
-    ? calcTotaisFromHistoricoDocs(historicoEquipeAtual.filter(d => ["recepcionista","lider"].includes(d.perfil)))
-    : calcTotaisDetalhados(equipeLancs);
-  const poolLab   = calcPoolPremio(teamTot.lab,     metaLab,  FAIXAS_POOL_LAB);
-  const poolImg   = calcPoolPremio(teamTot.img,     metaImg,  FAIXAS_POOL_IMG);
-  const poolProc  = calcPoolPremio(teamTot.proc,    metaProc, FAIXAS_POOL_PROC);
-  const poolCred  = credVig ? calcPoolPremio(teamTot.credito, metaCred, FAIXAS_POOL_CRED) : 0;
-  const parteLab  = calcPartePool(usuario.nome, poolLab);
-  const parteImg  = calcPartePool(usuario.nome, poolImg);
-  const parteProc = calcPartePool(usuario.nome, poolProc);
-  const parteCred = calcPartePool(usuario.nome, poolCred);
-
-  const premCaixa  = calcPremiacaoCaixaRec(caixa, credito, metaCaixa, metaCredito, mesAno);
   const premBoleto = calcPremBoleto(contBoleto || 0);
-  const totalAtual = premCaixa.valor + premBoleto + parteLab + parteImg + parteProc + parteCred;
 
-  // Projeção ao final do mês
-  let totalProj = totalAtual;
+  let projBoleto = premBoleto;
   if(diasPassF > 0) {
-    const projCaixa    = (caixa            / diasPassF) * diasUteis;
-    const projCredito  = (credito          / diasPassF) * diasUteis;
-    const projLab      = (teamTot.lab      / diasPassF) * diasUteis;
-    const projImg      = (teamTot.img      / diasPassF) * diasUteis;
-    const projProc     = (teamTot.proc     / diasPassF) * diasUteis;
-    const projCredEq   = (teamTot.credito  / diasPassF) * diasUteis;
-    const projCont     = Math.round((contBoleto / diasPassF) * diasUteis);
-    const projPoolLab  = calcPoolPremio(projLab,    metaLab,  FAIXAS_POOL_LAB);
-    const projPoolImg  = calcPoolPremio(projImg,    metaImg,  FAIXAS_POOL_IMG);
-    const projPoolProc = calcPoolPremio(projProc,   metaProc, FAIXAS_POOL_PROC);
-    const projPoolCred = credVig ? calcPoolPremio(projCredEq, metaCred, FAIXAS_POOL_CRED) : 0;
-    totalProj = calcPremiacaoCaixaRec(projCaixa, projCredito, metaCaixa, metaCredito, mesAno).valor
-              + calcPremBoleto(projCont)
-              + calcPartePool(usuario.nome, projPoolLab)
-              + calcPartePool(usuario.nome, projPoolImg)
-              + calcPartePool(usuario.nome, projPoolProc)
-              + calcPartePool(usuario.nome, projPoolCred);
+    const projCont = Math.round((contBoleto / diasPassF) * diasUteis);
+    projBoleto = calcPremBoleto(projCont);
   }
 
-  const pctLab  = metaLab  > 0 ? (teamTot.lab     / metaLab  * 100).toFixed(1) : "0.0";
-  const pctImg  = metaImg  > 0 ? (teamTot.img     / metaImg  * 100).toFixed(1) : "0.0";
-  const pctProc = metaProc > 0 ? (teamTot.proc    / metaProc * 100).toFixed(1) : "0.0";
-  const pctCred = metaCred > 0 ? (teamTot.credito / metaCred * 100).toFixed(1) : "0.0";
-
-  let proxHtml = "";
-  if(premCaixa.proxFaixa && premCaixa.faltaProx > 0) {
-    proxHtml = `<div class="prem-prox">Próx. faixa caixa: <strong>${premCaixa.proxFaixa}</strong> — falta <strong>${brl(premCaixa.faltaProx)}</strong></div>`;
-  } else if(!premCaixa.proxFaixa && premCaixa.valor > 0) {
-    proxHtml = `<div class="prem-pleno">🏆 Caixa máximo atingido!</div>`;
-  }
-
+  const nb = contBoleto || 0;
   el.innerHTML = `
-    <div class="prem-top"><div class="prem-tit">🏅 Premiação Atual</div><span style="font-size:24px">🎯</span></div>
-    <div class="prem-val">${brl(totalAtual)}</div>
-    <div style="font-size:12px;color:#78350F;margin:8px 0 6px;display:flex;flex-direction:column;gap:5px">
-      <div>💰 Caixa: <strong>${brl(premCaixa.valor)}</strong> <span style="opacity:.75">${premCaixa.faixa}</span></div>
-      <div>🧾 Boleto: <strong>${brl(premBoleto)}</strong> <span style="opacity:.75">(${contBoleto||0} boleto${(contBoleto||0)!==1?"s":""})</span></div>
-      <div>💳 Crédito (pool): <strong>${brl(parteCred)}</strong> <span style="opacity:.75">${credVig ? `(equipe ${pctCred}%)` : "(vigente a partir de Maio/2026)"}</span></div>
-      <div>🔬 Lab: <strong>${brl(parteLab)}</strong> <span style="opacity:.75">(equipe ${pctLab}%)</span></div>
-      <div>🩻 Imagem: <strong>${brl(parteImg)}</strong> <span style="opacity:.75">(equipe ${pctImg}%)</span></div>
-      <div>🏥 Proc: <strong>${brl(parteProc)}</strong> <span style="opacity:.75">(equipe ${pctProc}%)</span></div>
+    <div class="prem-top"><div class="prem-tit">🧾 Premiação Boleto</div><span style="font-size:24px">🎯</span></div>
+    <div class="prem-val">${brl(premBoleto)}</div>
+    <div style="font-size:12px;color:#78350F;margin:8px 0 6px">
+      ${nb} boleto${nb !== 1 ? "s" : ""} pago${nb !== 1 ? "s" : ""} este mês
     </div>
     <div style="font-size:13px;color:#92400E;font-weight:600;border-top:1px solid #FDE68A;padding-top:8px;margin-top:4px">
-      Projeção total: ${brl(totalProj)}
+      Projeção: ${brl(projBoleto)}
     </div>
-    ${proxHtml}
   `;
 }
 
@@ -5293,95 +5236,6 @@ function _tabPremFaixaLinha(label, valorLabel, status, extraDireita) {
     <span style="text-align:center">${icones[status]}</span>
     <span><strong>${label}</strong> → <strong>${valorLabel}</strong></span>
     <span style="text-align:right;font-size:12px">${extraDireita}</span>
-  </div>`;
-}
-
-// Bloco "💰 Caixa" — 3 faixas (80/90/100%).
-// 80% e 90% pagam VALOR FIXO (metaCaixa × 0.005 × mult).
-// 100%+ paga PROPORCIONAL ao caixa real (caixa × 0.005, escala acima de 100%).
-function _tabPremBlocoCaixa(caixa, metaCaixa) {
-  if(metaCaixa <= 0) return "";
-  const faixas = [
-    { label:"80% Caixa",  pct:0.80, valor: metaCaixa * 0.005 * 0.50 },   // R$ 300 fixo (meta padrão)
-    { label:"90% Caixa",  pct:0.90, valor: metaCaixa * 0.005 * 0.75 },   // R$ 450 fixo
-    { label:"100% Caixa", pct:1.00, valor: metaCaixa * 0.005 },          // R$ 600 (referência) — escala acima
-  ];
-  const pctAtual = caixa / metaCaixa;
-  let idxAtingida = -1;
-  faixas.forEach((f,i) => { if(pctAtual >= f.pct) idxAtingida = i; });
-  const idxAtual = idxAtingida >= 0 ? idxAtingida : 0;
-
-  const linhas = faixas.map((f,i) => {
-    let status, extra;
-    const eh100 = f.pct === 1.0;
-    // Label de valor: faixa 100% usa "+ proporcional" pra explicar escalada
-    const valorLabel = eh100 ? `${brl(f.valor)} + proporcional` : brl(f.valor);
-
-    if(i < idxAtual) { status = "batida"; extra = "Batido"; }
-    else if(i === idxAtual) {
-      status = "atual";
-      if(pctAtual >= f.pct) {
-        if(eh100) {
-          const valorReal = caixa * 0.005;
-          extra = `ganha ${brl(valorReal)} (${(pctAtual*100).toFixed(1)}%)`;
-        } else {
-          extra = `Você está aqui (${(pctAtual*100).toFixed(1)}%)`;
-        }
-      } else {
-        extra = `faltam ${brl(metaCaixa * f.pct - caixa)}`;
-      }
-    } else {
-      status = "proxima";
-      extra = `faltam ${brl(metaCaixa * f.pct - caixa)}`;
-    }
-    return _tabPremFaixaLinha(f.label, valorLabel, status, extra);
-  }).join("");
-
-  return `<div class="tab-prem-cat">
-    <div class="tab-prem-cat-titulo">
-      <span>💰 Caixa</span>
-      <span class="tab-prem-cat-parte">80% / 90% fixo · 100% proporcional</span>
-    </div>
-    ${linhas}
-  </div>`;
-}
-
-// Bloco "💎 Bônus 0.007" — combo Caixa 100% + Crédito Individual 100%.
-function _tabPremBlocoBonus(caixa, credito, metaCaixa, metaCredito) {
-  if(metaCaixa <= 0 || metaCredito <= 0) return "";
-  const pctCx = caixa / metaCaixa;
-  const pctCr = credito / metaCredito;
-  const atingido = pctCx >= 1.0 && pctCr >= 1.0;
-  const valorAtual = atingido ? (caixa + credito) * 0.007 : 0;
-
-  const faltaCx = pctCx < 1 ? brl(metaCaixa - caixa) : null;
-  const faltaCr = pctCr < 1 ? brl(metaCredito - credito) : null;
-
-  const statusHtml = atingido
-    ? `<div style="color:#059669;font-weight:700;font-size:14px;margin-top:6px">✅ Atingido!</div>`
-    : `<div style="font-size:13px;color:var(--text2);margin-top:6px">
-         Status: Caixa <strong>${(pctCx*100).toFixed(1)}%</strong>, Crédito <strong>${(pctCr*100).toFixed(1)}%</strong>
-         <div style="font-size:12px;margin-top:4px">
-           ${faltaCx ? `Faltam <strong>${faltaCx}</strong> em Caixa` : ""}
-           ${faltaCx && faltaCr ? " · " : ""}
-           ${faltaCr ? `Faltam <strong>${faltaCr}</strong> em Crédito` : ""}
-         </div>
-       </div>`;
-
-  const borda = atingido ? "border-color:#059669;background:#F0FDF4" : "";
-  return `<div class="tab-prem-cat" style="${borda}">
-    <div class="tab-prem-cat-titulo">
-      <span>💎 Bônus 100% Caixa + 100% Crédito Individual</span>
-      <span class="tab-prem-cat-parte">Combo</span>
-    </div>
-    <div style="font-size:13px;line-height:1.5">
-      <div><strong>Atual:</strong> ${brl(valorAtual)}</div>
-      ${statusHtml}
-      <div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
-        <strong>Para atingir:</strong> bater 100% caixa E 100% crédito do mês<br>
-        <strong>Se atingido:</strong> (caixa + crédito) × 0,7%
-      </div>
-    </div>
   </div>`;
 }
 
@@ -5424,51 +5278,6 @@ function _tabPremBlocoBoleto(contBoleto) {
   </div>`;
 }
 
-// Bloco genérico de pool (Lab/Img/Proc/Cred) — 3 faixas com valor individual = pool × fração.
-function _tabPremBlocoPool(titulo, parteLabel, total, meta, faixas, fracaoIndividual, naoVigente) {
-  if(naoVigente) {
-    return `<div class="tab-prem-cat" style="opacity:.6">
-      <div class="tab-prem-cat-titulo">
-        <span>${titulo}</span>
-        <span class="tab-prem-cat-parte">${parteLabel}</span>
-      </div>
-      <div style="font-size:13px;color:var(--text2);padding:12px 0;text-align:center">Vigente a partir de Maio/2026</div>
-    </div>`;
-  }
-  if(meta <= 0) return "";
-  // FAIXAS_POOL_* vêm em ordem decrescente; inverter pra ASC (80→90→100) na exibição.
-  const faixasAsc = [...faixas].sort((a,b) => a.pct - b.pct);
-  const pctAtual = total / meta;
-  let idxAtingida = -1;
-  faixasAsc.forEach((f,i) => { if(pctAtual >= f.pct) idxAtingida = i; });
-  const idxAtual = idxAtingida >= 0 ? idxAtingida : 0;
-
-  const linhas = faixasAsc.map((f,i) => {
-    const valorIndividual = f.pool * fracaoIndividual;
-    const labelFaixa = `${(f.pct*100).toFixed(0)}% Equipe`;
-    let status, extra;
-    if(i < idxAtual) { status = "batida"; extra = "Batido"; }
-    else if(i === idxAtual) {
-      status = "atual";
-      extra = pctAtual >= f.pct
-        ? `Equipe está aqui (${(pctAtual*100).toFixed(1)}%)`
-        : `faltam ${brl(meta * f.pct - total)} da equipe`;
-    } else {
-      status = "proxima";
-      extra = `faltam ${brl(meta * f.pct - total)} da equipe`;
-    }
-    return _tabPremFaixaLinha(labelFaixa, brl(valorIndividual), status, extra);
-  }).join("");
-
-  return `<div class="tab-prem-cat">
-    <div class="tab-prem-cat-titulo">
-      <span>${titulo}</span>
-      <span class="tab-prem-cat-parte">${parteLabel}</span>
-    </div>
-    ${linhas}
-  </div>`;
-}
-
 // Dispatcher — visível só pra recepcionista e lider.
 function renderTabelaPremiacao() {
   const card = document.getElementById("card-tabela-premiacao");
@@ -5483,58 +5292,16 @@ function renderTabelaPremiacao() {
   card.style.display = "";
 
   // Em meses < MARCO: lançamentos individuais não eram registrados.
-  // Mostra mensagem amigável em vez dos cards.
   if(mesAno < MARCO_NOVO_MODELO) {
     el.innerHTML = `<div class="tab-prem-aviso">📊 Tabela individual disponível a partir de Maio/2026.<br><span style="font-size:12px;font-weight:400">Em meses anteriores, lançamentos individuais não eram registrados no sistema.</span></div>`;
     return;
   }
 
-  if(!metas) { el.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:12px 0">Aguardando metas...</div>`; return; }
-
-  // Caixa/Crédito do user logado
-  let caixa, credito;
-  if(historicoIndividual) {
-    caixa   = historicoIndividual.caixa   || 0;
-    credito = historicoIndividual.credito || 0;
-  } else {
-    ({ caixa, credito } = calcTotais(lancMes));
-  }
+  // Em Angra a única premiação individual restante é a de Boleto. Caixa,
+  // Crédito, Lab, Imagem, Procedimentos agora são premiações coletivas
+  // (renderizadas em #card-prem-coletiva-metas pelo renderPremColetiva).
   const contBoleto = lancMes.filter(l => l.tipo === "entrada" && l.forma_pagamento === "Boleto").length;
-
-  // TODO: configurar metas de Angra
-  const m = metas;
-  const metaCaixa   = m.meta_caixa_recepcao   || 0;
-  const metaCredito = m.meta_credito_recepcao || 0;
-  const metaLab     = m.meta_lab_equipe       || 0;
-  const metaImg     = m.meta_img_equipe       || 0;
-  const metaProc    = m.meta_proc_equipe      || 0;
-  const metaCred    = m.meta_credito_equipe   || METAS_EQUIPE_PADRAO.meta_credito_equipe;
-  const credVig     = mesAno >= MARCO_NOVO_MODELO;
-
-  // Pools da equipe
-  const teamTot = historicoEquipeAtual.length > 0
-    ? calcTotaisFromHistoricoDocs(historicoEquipeAtual.filter(d => ["recepcionista","lider"].includes(d.perfil)))
-    : calcTotaisDetalhados(equipeLancs);
-
-  const blocos = [];
-  if(perfil === "recepcionista") {
-    const fracao = POOL_REC_QTD > 0 ? 0.40 / POOL_REC_QTD : 0; // TODO: configurar POOL_REC_QTD em Angra
-    blocos.push(_tabPremBlocoCaixa(caixa, metaCaixa));
-    blocos.push(_tabPremBlocoBonus(caixa, credito, metaCaixa, metaCredito));
-    blocos.push(_tabPremBlocoBoleto(contBoleto));
-    blocos.push(_tabPremBlocoPool("🔬 Lab",            "Sua parte: 8%", teamTot.lab,     metaLab,  FAIXAS_POOL_LAB,  fracao, false));
-    blocos.push(_tabPremBlocoPool("🩻 Imagem",         "Sua parte: 8%", teamTot.img,     metaImg,  FAIXAS_POOL_IMG,  fracao, false));
-    blocos.push(_tabPremBlocoPool("🏥 Procedimentos",  "Sua parte: 8%", teamTot.proc,    metaProc, FAIXAS_POOL_PROC, fracao, false));
-    blocos.push(_tabPremBlocoPool("💳 Crédito",        "Sua parte: 8%", teamTot.credito, metaCred, FAIXAS_POOL_CRED, fracao, !credVig));
-  } else { // lider
-    blocos.push(`<div class="tab-prem-aviso">ℹ️ <strong>Premiação de Caixa da Líder</strong> é definida manualmente pelo sócio conforme resultado da clínica.</div>`);
-    blocos.push(_tabPremBlocoBoleto(contBoleto));
-    blocos.push(_tabPremBlocoPool("🔬 Lab",            "Sua parte: 30%", teamTot.lab,     metaLab,  FAIXAS_POOL_LAB,  0.30, false));
-    blocos.push(_tabPremBlocoPool("🩻 Imagem",         "Sua parte: 30%", teamTot.img,     metaImg,  FAIXAS_POOL_IMG,  0.30, false));
-    blocos.push(_tabPremBlocoPool("🏥 Procedimentos",  "Sua parte: 30%", teamTot.proc,    metaProc, FAIXAS_POOL_PROC, 0.30, false));
-    blocos.push(_tabPremBlocoPool("💳 Crédito",        "Sua parte: 30%", teamTot.credito, metaCred, FAIXAS_POOL_CRED, 0.30, !credVig));
-  }
-  el.innerHTML = blocos.join("");
+  el.innerHTML = _tabPremBlocoBoleto(contBoleto);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -6310,7 +6077,6 @@ function renderDashboard() {
   renderResumoDia();
   renderDashEquipe(lista);
   renderDashRanking(lista);
-  renderDashPremiacao();
   renderDashSaidasAvulsas();
   renderDashColaboradoras(lista);
   renderPrescritores();
@@ -6446,10 +6212,6 @@ function renderDashHistorico() {
     ? `<div class="rank-grupo-sep" style="padding:8px 12px;margin-bottom:10px">🩺 Recepção Médica</div>${rankRec.map(colabCard).join("")}` : "";
   document.getElementById("dash-colaboradoras").innerHTML = secRec
     || '<div class="empty"><div class="ei">👥</div>Nenhum dado histórico no período.</div>';
-
-  // Premiação calculada pelos totais históricos
-  const premEl = document.getElementById("dash-premiacao");
-  if(premEl) premEl.innerHTML = '<div style="color:var(--text2);font-size:13px;padding:12px 0">Premiações calculadas com base nos totais mensais importados — detalhamento diário não disponível para meses históricos.</div>';
 
   // Prescritores não disponíveis em dados históricos
   const presEl = document.getElementById("dash-prescritores");
@@ -7058,151 +6820,6 @@ function renderResumoDia() {
     elDiff.textContent = (diffLiq >= 0 ? "+" : "") + brl(diffLiq);
     elDiff.className   = "pl-valor " + (diffLiq >= 0 ? "pl-cor-verde" : "pl-cor-vermelho");
   }
-}
-
-function renderDashPremiacao() {
-  const el = document.getElementById("dash-premiacao");
-  if(!el) return;
-
-  // TODO: configurar metas de Angra
-  const m          = dashMetasMes || {};
-  const metaRec    = m.meta_caixa_recepcao   || 0;
-  const metaCred   = m.meta_credito_recepcao || 0;
-  const metaLab    = m.meta_lab_equipe       || 0;
-  const metaImg    = m.meta_img_equipe       || 0;
-  const metaProc   = m.meta_proc_equipe      || 0;
-  const metaCredEq = m.meta_credito_equipe   || METAS_EQUIPE_PADRAO.meta_credito_equipe;
-  const diasUteis  = m.dias_uteis || 22;
-  const diasPassF  = diasUteisPassadosFloat();
-  // Pool de Crédito vigente apenas a partir do marco (Maio/2026).
-  const credVig    = (typeof dashMesAno !== "undefined" ? dashMesAno : mesAno) >= MARCO_NOVO_MODELO;
-
-  // Agrupa lançamentos por colaboradora
-  const por = {};
-  dashLancs.forEach(l => {
-    if(!por[l.usuario_nome]) por[l.usuario_nome] = [];
-    por[l.usuario_nome].push(l);
-  });
-
-  // ── Recepção: pool lab/img/proc/cred ───────────────────────
-  const recLancs   = dashLancs.filter(l => { const p=PERFIS[l.usuario_nome]||""; return p==="recepcionista"||p==="lider"; });
-  const teamRecTot = calcTotaisDetalhados(recLancs);
-  const poolLab    = calcPoolPremio(teamRecTot.lab,     metaLab,  FAIXAS_POOL_LAB);
-  const poolImg    = calcPoolPremio(teamRecTot.img,     metaImg,  FAIXAS_POOL_IMG);
-  const poolProc   = calcPoolPremio(teamRecTot.proc,    metaProc, FAIXAS_POOL_PROC);
-  const poolCred   = credVig ? calcPoolPremio(teamRecTot.credito, metaCredEq, FAIXAS_POOL_CRED) : 0;
-  const pctLabStr  = metaLab    > 0 ? (teamRecTot.lab     / metaLab    * 100).toFixed(1)+"%" : "—";
-  const pctImgStr  = metaImg    > 0 ? (teamRecTot.img     / metaImg    * 100).toFixed(1)+"%" : "—";
-  const pctProcStr = metaProc   > 0 ? (teamRecTot.proc    / metaProc   * 100).toFixed(1)+"%" : "—";
-  const pctCredStr = metaCredEq > 0 ? (teamRecTot.credito / metaCredEq * 100).toFixed(1)+"%" : "—";
-
-  // Pool projeção
-  let projPoolLab = poolLab, projPoolImg = poolImg, projPoolProc = poolProc, projPoolCred = poolCred;
-  if(diasPassF > 0) {
-    projPoolLab  = calcPoolPremio((teamRecTot.lab     / diasPassF) * diasUteis, metaLab,    FAIXAS_POOL_LAB);
-    projPoolImg  = calcPoolPremio((teamRecTot.img     / diasPassF) * diasUteis, metaImg,    FAIXAS_POOL_IMG);
-    projPoolProc = calcPoolPremio((teamRecTot.proc    / diasPassF) * diasUteis, metaProc,   FAIXAS_POOL_PROC);
-    projPoolCred = credVig ? calcPoolPremio((teamRecTot.credito / diasPassF) * diasUteis, metaCredEq, FAIXAS_POOL_CRED) : 0;
-  }
-
-  // ── Linhas recepção ────────────────────────────────────────
-  const linhasRec = Object.entries(por)
-    .filter(([nome]) => { const p=PERFIS[nome]||""; return p==="recepcionista"||p==="lider"; })
-    .map(([nome, ls]) => {
-      const tot       = calcTotaisDetalhados(ls);
-      const perfil    = PERFIS[nome] || "";
-      const contBol   = ls.filter(l => l.tipo==="entrada" && l.forma_pagamento==="Boleto").length;
-      const premCaixa = calcPremiacaoCaixaRec(tot.caixa, tot.credito, metaRec, metaCred, dashMesAno);
-      const premBol   = calcPremBoleto(contBol);
-      const parteLab  = calcPartePool(nome, poolLab);
-      const parteImg  = calcPartePool(nome, poolImg);
-      const parteProc = calcPartePool(nome, poolProc);
-      const parteCred = calcPartePool(nome, poolCred);
-      const total     = premCaixa.valor + premBol + parteLab + parteImg + parteProc + parteCred;
-      let totalProj   = total;
-      if(diasPassF > 0) {
-        const projC    = (tot.caixa   / diasPassF) * diasUteis;
-        const projCr   = (tot.credito / diasPassF) * diasUteis;
-        const projCont = Math.round((contBol / diasPassF) * diasUteis);
-        totalProj = calcPremiacaoCaixaRec(projC, projCr, metaRec, metaCred, dashMesAno).valor
-                  + calcPremBoleto(projCont)
-                  + calcPartePool(nome, projPoolLab)
-                  + calcPartePool(nome, projPoolImg)
-                  + calcPartePool(nome, projPoolProc)
-                  + calcPartePool(nome, projPoolCred);
-      }
-      const pctC = metaRec > 0 ? (tot.caixa / metaRec * 100).toFixed(1) : "—";
-      return { nome, perfil, tot, contBol, premCaixa, premBol, parteLab, parteImg, parteProc, parteCred, total, totalProj, pctC };
-    })
-    .sort((a,b) => b.total - a.total);
-
-  // ── Totalizadores ──────────────────────────────────────────
-  const totalRec     = linhasRec.reduce((s,r) => s + r.total, 0);
-  const totalProjRec = linhasRec.reduce((s,r) => s + r.totalProj, 0);
-
-  if(!linhasRec.length) {
-    el.innerHTML = '<div class="empty"><div class="ei">💰</div>Nenhum dado disponível.</div>';
-    return;
-  }
-
-  // ── Funções de linha ───────────────────────────────────────
-  function faixaClass(faixa) {
-    if(!faixa) return "";
-    if(faixa.includes("💎") || faixa.includes("🏆") || faixa.includes("150%")) return "top";
-    if(faixa.includes("✅") || faixa.includes("100%")) return "ok";
-    return "";
-  }
-
-  function rowRec(r) {
-    const fc = faixaClass(r.premCaixa.faixa);
-    const cor = v => v > 0 ? "color:#B45309" : "color:var(--text2)";
-    return `<tr>
-      <td><strong>${r.nome}</strong></td>
-      <td class="num">${brl(r.tot.caixa)}<div style="font-size:11px;color:${+r.pctC>=100?"var(--success)":"var(--primary)"};">${r.pctC !== "—" ? r.pctC+"%" : "—"}</div></td>
-      <td class="num" style="font-weight:700;${cor(r.premCaixa.valor)}">${brl(r.premCaixa.valor)}<div style="margin-top:2px"><span class="prem-faixa ${fc}" style="font-size:10px">${r.premCaixa.faixa}</span></div></td>
-      <td class="num" style="${cor(r.premBol)}">${brl(r.premBol)}<div style="font-size:11px;color:var(--text2)">${r.contBol} bol.</div></td>
-      <td class="num" style="${cor(r.parteCred)}">${brl(r.parteCred)}</td>
-      <td class="num" style="${cor(r.parteLab)}">${brl(r.parteLab)}</td>
-      <td class="num" style="${cor(r.parteImg)}">${brl(r.parteImg)}</td>
-      <td class="num" style="${cor(r.parteProc)}">${brl(r.parteProc)}</td>
-      <td class="num" style="font-weight:700;${cor(r.total)}">${brl(r.total)}</td>
-      <td class="num" style="font-weight:700;${cor(r.totalProj)}">${brl(r.totalProj)}</td>
-    </tr>`;
-  }
-
-  const tblHead = `<thead><tr>
-    <th>Colaboradora</th>
-    <th class="num">Caixa</th>
-    <th class="num">Prêm. Caixa</th>
-    <th class="num">Boleto</th>
-    <th class="num">Crédito</th>
-    <th class="num">Lab</th>
-    <th class="num">Imagem</th>
-    <th class="num">Proc</th>
-    <th class="num">Total</th>
-    <th class="num">Projeção</th>
-  </tr></thead>`;
-
-  const resumoCards = `
-    <div class="prem-resumo-grid">
-      <div class="prem-resumo-card"><div class="prc-label">🩺 Total Recepção Médica</div><div class="prc-val">${brl(totalRec)}</div><div class="prc-sub">Projeção: ${brl(totalProjRec)}</div></div>
-      <div class="prem-resumo-card"><div class="prc-label">🔬 Lab equipe</div><div class="prc-val">${brl(teamRecTot.lab)}</div><div class="prc-sub">Meta: ${brl(metaLab)} · ${pctLabStr} · Pool: ${brl(poolLab)}</div></div>
-      <div class="prem-resumo-card"><div class="prc-label">🩻 Img equipe</div><div class="prc-val">${brl(teamRecTot.img)}</div><div class="prc-sub">Meta: ${brl(metaImg)} · ${pctImgStr} · Pool: ${brl(poolImg)}</div></div>
-      <div class="prem-resumo-card"><div class="prc-label">🏥 Proc equipe</div><div class="prc-val">${brl(teamRecTot.proc)}</div><div class="prc-sub">Meta: ${brl(metaProc)} · ${pctProcStr} · Pool: ${brl(poolProc)}</div></div>
-      <div class="prem-resumo-card"><div class="prc-label">💳 Crédito equipe</div><div class="prc-val">${brl(teamRecTot.credito)}</div><div class="prc-sub">${credVig ? `Meta: ${brl(metaCredEq)} · ${pctCredStr} · Pool: ${brl(poolCred)}` : "Vigente a partir de Maio/2026"}</div></div>
-    </div>`;
-
-  el.innerHTML = resumoCards + `
-    <div class="tbl-wrap">
-      <table class="prem-table">
-        ${tblHead}
-        <tbody>
-          <tr class="prem-grupo-sep"><td colspan="10">🩺 Recepção Médica · Lab ${pctLabStr} · Img ${pctImgStr} · Proc ${pctProcStr} · Cred ${credVig?pctCredStr:"—"}</td></tr>
-          ${linhasRec.map(rowRec).join("")}
-        </tbody>
-        <tfoot><tr><td colspan="8">Total Recepção</td><td class="num">${brl(totalRec)}</td><td class="num">${brl(totalProjRec)}</td></tr></tfoot>
-      </table>
-    </div>`;
 }
 
 // ── Ranking
