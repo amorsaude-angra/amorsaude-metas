@@ -1613,7 +1613,9 @@
             <label>💳 Forma de pagamento</label>
             <select id="rel-forma">
               <option value="">Todas</option>
-              <option value="caixa">Caixa</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="debito">Débito</option>
+              <option value="pix">PIX</option>
               <option value="credito">Crédito</option>
               <option value="boleto">Boleto</option>
             </select>
@@ -10936,7 +10938,7 @@ function _onMudarCategoriaRelatorio() {
 // com Data, Paciente, CPF, Médico, Recepcionista, Categoria, Subtipo, Forma Pagto e Valor.
 // `filtroCategoria`/`filtroSubtipo` (opcionais) decompõem o valor em fatia da categoria
 // filtrada — quando ambos vazios, mantém l.valor cheio (comportamento "Todas").
-function _normalizarLancamentoParaRelatorio(l, filtroCategoria, filtroSubtipo) {
+function _normalizarLancamentoParaRelatorio(l, filtroCategoria, filtroSubtipo, filtroForma) {
   const dt = l.data_hora
     ? (l.data_hora.toDate ? l.data_hora.toDate() : new Date(l.data_hora))
     : (l.criado_em
@@ -10979,17 +10981,43 @@ function _normalizarLancamentoParaRelatorio(l, filtroCategoria, filtroSubtipo) {
     categoriaLabel: categoriaLabel || "—",
     subtipo:        subtipo || "",
     formaLabel:     formaLabel || "—",
-    valor:          _calcularValorFatia(l, filtroCategoria, filtroSubtipo),
+    valor:          _calcularValorFatia(l, filtroCategoria, filtroSubtipo, filtroForma),
     _raw:           l,
   };
 }
 
-// Calcula a "fatia" de valor de um lançamento conforme o filtro de Categoria/Subtipo
-// ativo. Sem filtro ("Todas") retorna o l.valor cheio. Filtro de categoria específica
-// retorna só o campo daquela categoria (laboratorio/imagem/consultas/soma procedimentos).
-// Filtro de subtipo de procedimento retorna só o(s) procedimento(s) daquele tipo.
+// Calcula a "fatia" de valor de um lançamento conforme os filtros ativos.
+// Despacho:
+//   "Todas + Todas"            → l.valor cheio
+//   Só Categoria               → fatia da categoria (l.laboratorio/imagem/consultas/soma procs)
+//   Só Forma                   → parcela da forma (valor_1/_2 que bate; legacy: cheio se bate)
+//   Categoria + Forma (cruz.)  → parcela da forma × (fatia da categoria / valor total)
+//                                = rateio proporcional da forma na participação da categoria.
+//
+// NOTA sobre rateio Categoria×Forma: em lançamentos com categoria dividida E pagamento
+// dividido, o sistema NÃO armazena qual forma pagou qual categoria — então o resultado
+// é uma ESTIMATIVA por rateio proporcional. No caso comum (pagamento de uma forma só),
+// a proporção da forma é 100% sobre essa forma e o rateio dá o valor exato da fatia da
+// categoria, sem perda. Em legacy a forma é única, então mesma lógica se aplica.
+//
 // Reusada em coluna Valor, cards (Total/Médio) e exportação Excel.
-function _calcularValorFatia(l, filtroCategoria, filtroSubtipo) {
+function _calcularValorFatia(l, filtroCategoria, filtroSubtipo, filtroForma) {
+  if(!filtroCategoria && !filtroForma) return Number(l.valor) || 0;
+  if(filtroCategoria && filtroForma) {
+    const total = Number(l.valor) || 0;
+    if(total <= 0) return 0;
+    const fatiaCat     = _calcularValorFatiaCategoria(l, filtroCategoria, filtroSubtipo);
+    const parcelaForma = _calcularValorFatiaForma(l, filtroForma);
+    return parcelaForma * (fatiaCat / total);
+  }
+  if(filtroForma) return _calcularValorFatiaForma(l, filtroForma);
+  return _calcularValorFatiaCategoria(l, filtroCategoria, filtroSubtipo);
+}
+
+// Fatia por categoria. Schema novo: lê o campo numérico correspondente
+// (laboratorio/imagem/consultas) ou soma procedimentos[] (filtrado por subtipo).
+// Schema legacy: sem campos de categoria → 0 (mantém comportamento pré-existente).
+function _calcularValorFatiaCategoria(l, filtroCategoria, filtroSubtipo) {
   if(!filtroCategoria) return Number(l.valor) || 0;
   if(filtroCategoria === "exames")    return Number(l.laboratorio) || 0;
   if(filtroCategoria === "imagem")    return Number(l.imagem)      || 0;
@@ -11004,6 +11032,21 @@ function _calcularValorFatia(l, filtroCategoria, filtroSubtipo) {
   return Number(l.valor) || 0;
 }
 
+// Fatia por forma de pagamento. Schema novo: soma valor_1 (se forma_pagamento_1 bate)
+// + valor_2 (se forma_pagamento_2 bate) — cobre o caso "mesma forma nas duas parcelas".
+// Schema legacy: forma única, valor cheio quando bate, 0 caso contrário.
+function _calcularValorFatiaForma(l, forma) {
+  if(!forma) return Number(l.valor) || 0;
+  if(ehDocNovoSchema(l)) {
+    let total = 0;
+    if(l.forma_pagamento_1 === forma) total += Number(l.valor_1) || 0;
+    if(l.forma_pagamento_2 === forma) total += Number(l.valor_2) || 0;
+    return total;
+  }
+  if(infoFormaPagamento(l.forma_pagamento).chave === forma) return Number(l.valor) || 0;
+  return 0;
+}
+
 // Verifica se um doc atende ao filtro "categoria" (exames/procedimentos/imagem)
 function _matchCategoria(l, cat) {
   if(!cat) return true;
@@ -11014,21 +11057,15 @@ function _matchCategoria(l, cat) {
   return true;
 }
 
-// Verifica forma_pagamento (caixa/credito/boleto) — usa campos pré-computados
-// `caixa`/`credito` quando disponíveis e detecta boleto pelas formas detalhadas.
+// Verifica forma de pagamento individual (dinheiro/debito/pix/credito/boleto).
+// Schema novo: match em forma_pagamento_1 OU forma_pagamento_2 (exato, lowercase).
+// Schema legacy: normaliza l.forma_pagamento via infoFormaPagamento e compara.
 function _matchFormaPagamento(l, forma) {
   if(!forma) return true;
-  if(forma === "caixa")   return (Number(l.caixa)   || 0) > 0;
-  if(forma === "credito") return (Number(l.credito) || 0) > 0;
-  if(forma === "boleto") {
-    // Boleto é detectado pelo forma_pagamento_1/2 (regra Abr/2026: campo `boleto` é sempre 0)
-    if(l.forma_pagamento_1 === "boleto") return true;
-    if(l.forma_pagamento_2 === "boleto") return true;
-    // Schema legacy: forma_pagamento string
-    if((l.forma_pagamento || "").toLowerCase() === "boleto") return true;
-    return false;
+  if(ehDocNovoSchema(l)) {
+    return l.forma_pagamento_1 === forma || l.forma_pagamento_2 === forma;
   }
-  return true;
+  return infoFormaPagamento(l.forma_pagamento).chave === forma;
 }
 
 // Calcula o conjunto de mes_ano cobertos pelo intervalo [iniStr, fimStr] (YYYY-MM-DD)
@@ -11117,9 +11154,10 @@ async function gerarRelatorio() {
       docs = docs.filter(l => (l.paciente_nome || "").toLowerCase().includes(pacienteBusca));
     }
 
-    // Normaliza pra exibição. Passa cat/subtipo pro normalizador decompor o valor
-    // na fatia da categoria filtrada (Tabela/Cards/Excel todos consomem linha.valor).
-    let linhas = docs.map(l => _normalizarLancamentoParaRelatorio(l, cat, subtipo));
+    // Normaliza pra exibição. Passa cat/subtipo/forma pro normalizador decompor o valor
+    // na fatia filtrada (Tabela/Cards/Excel todos consomem linha.valor).
+    // Categoria + Forma juntas → rateio proporcional (vide _calcularValorFatia).
+    let linhas = docs.map(l => _normalizarLancamentoParaRelatorio(l, cat, subtipo, forma));
 
     // Ordena por data desc
     linhas.sort((a,b) => (b.data?.getTime() || 0) - (a.data?.getTime() || 0));
