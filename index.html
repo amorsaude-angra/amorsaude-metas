@@ -1952,7 +1952,7 @@
     <!-- Forma de pagamento (1ª, sempre obrigatória) -->
     <div class="fg full">
       <label>Forma de Pagamento *</label>
-      <select id="pag-fp1" style="max-width:280px">
+      <select id="pag-fp1" style="max-width:280px" onchange="atualizarExigenciaNFModal()">
         <option value="" disabled selected>Selecione...</option>
       </select>
       <div style="font-size:11px;color:var(--text2);margin-top:4px" id="pag-fp1-hint">
@@ -1977,7 +1977,7 @@
       <div class="fgrid" style="background:var(--bg2);padding:12px;border-radius:var(--r2)">
         <div class="fg">
           <label>2ª Forma de Pagamento *</label>
-          <select id="pag-fp2"><option value="" disabled selected>Selecione...</option></select>
+          <select id="pag-fp2" onchange="atualizarExigenciaNFModal()"><option value="" disabled selected>Selecione...</option></select>
         </div>
         <div class="fg">
           <label>Valor 2ª forma (R$) *</label>
@@ -2029,6 +2029,21 @@
         <div style="font-size:11px;color:var(--text2);margin-top:6px;font-style:italic">
           ⓘ A saída cria um lançamento separado vinculado por id_par.
         </div>
+      </div>
+    </div>
+
+    <!-- NF (Nota Fiscal) — espelha o bloco do form principal (Commit 10) -->
+    <div class="fg full" id="p-nf-bloco" style="border-top:1px dashed var(--border);padding-top:14px;margin-top:10px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+        <input type="checkbox" id="p-nf-emitida" onchange="togglePNFEmitida()" />
+        🧾 NF já foi emitida? <span id="p-nf-asterisco" style="color:#DC2626;display:none">*</span>
+      </label>
+      <div id="p-nf-numero-wrap" style="display:none;margin-top:8px;padding-left:14px;border-left:2px solid var(--border)">
+        <label style="font-size:13px">Número da NF *</label>
+        <input type="text" id="p-nf-numero" placeholder="Ex: 12345" />
+      </div>
+      <div id="p-nf-aviso" style="display:none;font-size:11px;color:#B45309;margin-top:6px;font-style:italic">
+        ⓘ NF obrigatória — este pagamento inclui forma diferente de dinheiro.
       </div>
     </div>
 
@@ -4760,6 +4775,15 @@ async function salvarEntrada() {
   }
   // Se status ≠ "pago": fp1Final="", valor1Final=0, fp2Final="", valor2Final=0 (já inicializados)
 
+  // Exigência de NF: se status=pago E houver forma de pagamento != "dinheiro",
+  // NF é obrigatória (checkbox + número). Pagamentos 100% dinheiro são exceção.
+  if(_exigeNF({ status, forma_pagamento_1: fp1Final, forma_pagamento_2: fp2Final })) {
+    if(!nfEmitida || !nfNumero) {
+      toast("Este orçamento exige Nota Fiscal porque inclui pagamento por débito, PIX, crédito ou boleto. Marque 'NF já foi emitida' e informe o número antes de salvar.","err");
+      return;
+    }
+  }
+
   // ── Saída embutida (opcional) — Fase D3.6: tipo % ou R$ + limite por perfil ──
   const temSaida = document.getElementById("e-tem-saida")?.checked;
   let saidaValor = 0, saidaMotivo = "", idPar = null;
@@ -4927,6 +4951,24 @@ function toggleSaidaEmbutidaEntrada() {
   const wrap = document.getElementById("e-saida-wrap");
   if(wrap) wrap.style.display = cb && cb.checked ? "" : "none";
   if(cb && cb.checked) recalcDescontoEntrada();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  NF obrigatória: única fonte de verdade
+// ─────────────────────────────────────────────────────────────
+// Regra: se status="pago" E pelo menos uma forma de pagamento
+// preenchida não é "dinheiro", então NF é obrigatória.
+// Pagamentos 100% em dinheiro (1 ou 2 formas, todas dinheiro)
+// são exceção — NF fica opcional.
+// `lanc` deve trazer: { status, forma_pagamento_1, forma_pagamento_2 }.
+function _exigeNF(lanc) {
+  if (!lanc || lanc.status !== 'pago') return false;
+  const f1 = (lanc.forma_pagamento_1 || '').toLowerCase().trim();
+  const f2 = (lanc.forma_pagamento_2 || '').toLowerCase().trim();
+  if (!f1 && !f2) return false;
+  const f1ok = !f1 || f1 === 'dinheiro';
+  const f2ok = !f2 || f2 === 'dinheiro';
+  return !(f1ok && f2ok);
 }
 
 // Toggle do bloco "Número da NF" no form de Entrada — Commit 10
@@ -9667,6 +9709,12 @@ function abrirModalPagamento(doc, statusAnterior) {
   set("pag-fp2-val","");
   removerSegundaFormaModal();
 
+  // Reset NF (modal de pagamento)
+  set("p-nf-numero","");
+  const cbNFp = document.getElementById("p-nf-emitida");
+  if(cbNFp) { cbNFp.checked = false; togglePNFEmitida(); }
+  atualizarExigenciaNFModal();
+
   // Saída pendente (D3.6): preserva tipo (% ou R$) gravado no doc.
   const cb = document.getElementById("pag-tem-saida");
   const desc = lerDesconto(doc.saida_pendente);
@@ -10513,6 +10561,7 @@ function adicionarSegundaFormaModal() {
   const hint = document.getElementById("pag-fp1-hint");
   if(hint) hint.style.display = "none";
   validarSomaPagamentosModal();
+  atualizarExigenciaNFModal();
 }
 function removerSegundaFormaModal() {
   document.getElementById("pag-fp2-wrap").style.display = "none";
@@ -10524,6 +10573,7 @@ function removerSegundaFormaModal() {
   const hint = document.getElementById("pag-fp1-hint");
   if(hint) hint.style.display = "";
   validarSomaPagamentosModal();
+  atualizarExigenciaNFModal();
 }
 function validarSomaPagamentosModal() {
   const total = Number(document.getElementById("pag-total-num")?.value) || 0;
@@ -10551,6 +10601,28 @@ function toggleSaidaModalPag() {
   const cb = document.getElementById("pag-tem-saida");
   const wrap = document.getElementById("pag-saida-wrap");
   if(wrap) wrap.style.display = cb && cb.checked ? "" : "none";
+}
+
+// Toggle do bloco "Número da NF" no modal de pagamento (espelho de toggleNFEntrada)
+function togglePNFEmitida() {
+  const cb = document.getElementById("p-nf-emitida");
+  const wrap = document.getElementById("p-nf-numero-wrap");
+  if(wrap) wrap.style.display = cb && cb.checked ? "" : "none";
+}
+
+// Atualiza dica visual de obrigatoriedade da NF no modal de pagamento,
+// baseado nas formas de pagamento escolhidas no momento.
+// Não bloqueia nada — a validação real acontece em salvarPagamentoModal.
+function atualizarExigenciaNFModal() {
+  const fp1 = document.getElementById("pag-fp1")?.value || "";
+  const wrap2 = document.getElementById("pag-fp2-wrap");
+  const tem2 = wrap2 && wrap2.style.display !== "none";
+  const fp2 = tem2 ? (document.getElementById("pag-fp2")?.value || "") : "";
+  const exige = _exigeNF({ status: "pago", forma_pagamento_1: fp1, forma_pagamento_2: fp2 });
+  const ast = document.getElementById("p-nf-asterisco");
+  const aviso = document.getElementById("p-nf-aviso");
+  if(ast)   ast.style.display   = exige ? "" : "none";
+  if(aviso) aviso.style.display = exige ? "" : "none";
 }
 
 // Salva o pagamento: faz update no doc original + materializa saída (se houver) com id_par.
@@ -10586,6 +10658,17 @@ async function salvarPagamentoModal() {
     }
     valor1Final = fp1val; valor2Final = fp2val;
     fp1Final = fp1; fp2Final = fp2;
+  }
+
+  // NF (Nota Fiscal) — exceção 100% dinheiro
+  const nfEmitidaP = !!document.getElementById("p-nf-emitida")?.checked;
+  const nfNumeroP  = (document.getElementById("p-nf-numero")?.value || "").trim();
+  if(nfEmitidaP && !nfNumeroP) { toast("Informe o número da NF.","err"); return; }
+  if(_exigeNF({ status: "pago", forma_pagamento_1: fp1Final, forma_pagamento_2: fp2Final })) {
+    if(!nfEmitidaP || !nfNumeroP) {
+      toast("Este orçamento exige Nota Fiscal porque inclui pagamento por débito, PIX, crédito ou boleto. Marque 'NF já foi emitida' e informe o número antes de salvar.","err");
+      return;
+    }
   }
 
   // Saída embutida (opcional) — Fase D3.6: % ou R$ + limite por perfil
@@ -10640,6 +10723,10 @@ async function salvarPagamentoModal() {
       valor_2:           Number(valor2Final) || 0,
       // F2 — observacoes (sempre gravado, mesmo vazio — sobrescreve o anterior)
       observacoes: ((document.getElementById("pag-observacoes")?.value || "").trim().slice(0, 250)),
+      // NF (Nota Fiscal) — Commit 10
+      nf_status:     nfEmitidaP ? "emitida" : "pendente",
+      nf_numero:     nfEmitidaP ? nfNumeroP : null,
+      nf_emitida_em: nfEmitidaP ? firebase.firestore.FieldValue.serverTimestamp() : null,
       atualizado_em: ts,
       // Auditoria mínima
       editado_em:        ts,
