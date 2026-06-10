@@ -4249,15 +4249,25 @@ function atualizarCards() {
   if(!FAZ_LANC.includes(perfil)) return;
 
   let caixa, credito;
+  let caixaBase, creditoBase, contBoletoBase;
   if(historicoIndividual) {
     caixa   = historicoIndividual.caixa   || 0;
     credito = historicoIndividual.credito || 0;
+    // Histórico (mês fechado) já não inclui "hoje" — base = total
+    caixaBase   = caixa;
+    creditoBase = credito;
   } else {
     ({ caixa, credito } = calcTotais(lancMes));
+    // Mês corrente: realizado-base exclui lançamentos de hoje
+    const lancMesBase = lancsAteOntem(lancMes);
+    ({ caixa: caixaBase, credito: creditoBase } = calcTotais(lancMesBase));
   }
   const metaCaixa   = metas.meta_caixa_recepcao||0;
   const metaCredito = metas.meta_credito_recepcao||0;
   const contBoleto  = lancMes.filter(_ehLancBoleto).length;
+  contBoletoBase    = historicoIndividual
+                      ? contBoleto
+                      : lancsAteOntem(lancMes).filter(_ehLancBoleto).length;
 
   console.log(`[Amor Saúde] Totais — Perfil: ${perfil} | Caixa: ${caixa.toFixed(2)} | Crédito: ${credito.toFixed(2)} | MetaCaixa: ${metaCaixa} | MetaCredito: ${metaCredito} | Boletos: ${contBoleto} | Qtd lançamentos: ${lancMes.length}`);
 
@@ -4267,8 +4277,8 @@ function atualizarCards() {
   if(TEM_CREDITO.includes(perfil))
     grid.appendChild(cardMeta("Meta de Crédito","💳",credito,metaCredito));
 
-  atualizarProj(caixa, metaCaixa, credito, metaCredito);
-  atualizarCardPremiacao(caixa, credito, metaCaixa, metaCredito, perfil, contBoleto);
+  atualizarProj(caixa, metaCaixa, credito, metaCredito, caixaBase, creditoBase);
+  atualizarCardPremiacao(caixa, credito, metaCaixa, metaCredito, perfil, contBoleto, contBoletoBase);
   atualizarMetaDiaria(caixa, metaCaixa);
   atualizarResumoDia();
   renderTabelaPremiacao();
@@ -4312,8 +4322,10 @@ function cardMeta(titulo, ico, atingido, meta) {
   return div;
 }
 
-function atualizarProj(caixaAtual, metaCaixa, credito, metaCredito) {
-  const diasUteis = metas?.dias_uteis||22;
+function atualizarProj(caixaAtual, metaCaixa, credito, metaCredito, caixaBase, creditoBase) {
+  // Numerador dinâmico (coerente com diasPass, que já desconta feriados)
+  const _hoje = new Date();
+  const diasUteis = calcularDiasUteisMes(_hoje.getFullYear(), _hoje.getMonth() + 1);
   const diasPass  = diasUteisPassados(diasUteis);
   const diasRest  = diasUteis - diasPass;
 
@@ -4323,9 +4335,12 @@ function atualizarProj(caixaAtual, metaCaixa, credito, metaCredito) {
     return;
   }
 
-  const mediaCaixa   = caixaAtual / diasPass;
+  // Base da projeção exclui lançamentos de hoje (fallback pra valores totais caso chamada antiga)
+  const baseCaixa    = caixaBase   != null ? caixaBase   : caixaAtual;
+  const baseCredito  = creditoBase != null ? creditoBase : credito;
+  const mediaCaixa   = baseCaixa / diasPass;
   const projCaixa    = mediaCaixa * diasUteis;
-  const mediaCredito = credito / diasPass;
+  const mediaCredito = baseCredito / diasPass;
   const projCredito  = mediaCredito * diasUteis;
 
   const pctCaixa   = metaCaixa   > 0 ? (projCaixa   / metaCaixa)   * 100 : 0;
@@ -5330,19 +5345,23 @@ function renderHistorico(lista, dataSel) {
 // Caixa/Lab/Img/Proc/Cred individuais foram absorvidos pelo card de Premiação Coletiva.
 // Assinatura preservada (caixa, credito, metaCaixa, metaCredito, perfil) pra não
 // quebrar o call site em atualizarCards() — params ficam ignorados.
-function atualizarCardPremiacao(caixa, credito, metaCaixa, metaCredito, perfil, contBoleto) {
+function atualizarCardPremiacao(caixa, credito, metaCaixa, metaCredito, perfil, contBoleto, contBoletoBase) {
   const el = document.getElementById("card-prem");
   if(!el) return;
 
   const m         = metas || {};
-  const diasUteis = m.dias_uteis || 22;
+  // Numerador dinâmico (coerente com diasPassF dinâmico — ambos descontam feriados)
+  const _hoje = new Date();
+  const diasUteis = calcularDiasUteisMes(_hoje.getFullYear(), _hoje.getMonth() + 1);
   const diasPassF = diasUteisPassadosFloat();
 
   const premBoleto = calcPremBoleto(contBoleto || 0);
 
   let projBoleto = premBoleto;
   if(diasPassF > 0) {
-    const projCont = Math.round((contBoleto / diasPassF) * diasUteis);
+    // Base exclui boletos de hoje (fallback pra contBoleto caso chamada antiga)
+    const baseBoletos = contBoletoBase != null ? contBoletoBase : contBoleto;
+    const projCont = Math.round((baseBoletos / diasPassF) * diasUteis);
     projBoleto = calcPremBoleto(projCont);
   }
 
@@ -5844,23 +5863,34 @@ function renderCardMetasEquipe() {
   // A partir do MARCO (Maio/2026), equipe lança via formulário — usa equipeLancs.
   // Antes do marco, lê de faturamentoDiario importado.
   const usaLancs = mesAno >= MARCO_NOVO_MODELO;
-  // Totais da equipe (usado pelo bloco Recepção/Líder)
-  const tot      = usaLancs ? agregarTotaisEquipeLancs(equipeLancs) : getTotaisEquipeFatDiario(mesAno);
+  // Filtra colaboradoras afastadas (ex: Yasmin Pimentel) tanto do Realizado quanto da projeção
+  const equipeAtivas = (equipeLancs || []).filter(l => !ehAfastada(l.usuario_nome));
+  // Totais REALIZADOS (incluindo hoje) — mostrados no card "Realizado"
+  const tot      = usaLancs ? agregarTotaisEquipeLancs(equipeAtivas) : getTotaisEquipeFatDiario(mesAno);
+  // Base da projeção: realizado SEM hoje (pra fatDiario histórico, já não inclui hoje)
+  const totBase  = usaLancs
+    ? agregarTotaisEquipeLancs(lancsAteOntem(equipeAtivas))
+    : tot;
   const fonteHtml = bannerFonteEquipe(usaLancs);
   const m        = metas;
-  const diasUteis = m.dias_uteis || 22;
+  // Numerador dinâmico (coerente com diasPassF, que já desconta feriados)
+  const [_anoProj, _mesProj] = mesAno.split("-").map(Number);
+  const diasUteis = calcularDiasUteisMes(_anoProj, _mesProj);
   const diasPassF = diasUteisPassadosFloat();
 
-  function metrica(tit, val, meta) {
+  function metrica(tit, val, meta, valBase) {
     const pct    = meta > 0 ? Math.min((val/meta)*100, 100) : 0;
     const rawPct = meta > 0 ? (val/meta)*100 : 0;
     const classe = rawPct >= 80 ? "verde" : rawPct >= 50 ? "amarelo" : "vermelho";
     let projHtml = "";
+    const baseProj = valBase != null ? valBase : val;
     if(diasPassF > 0 && meta > 0) {
-      const projVal = (val / diasPassF) * diasUteis;
+      const projVal = (baseProj / diasPassF) * diasUteis;
       const projPct = Math.min((projVal/meta)*100,100);
       const projCl  = projPct >= 80 ? "verde" : projPct >= 50 ? "amarelo" : "vermelho";
       projHtml = `<div class="equipe-met-meta" style="margin-top:4px">Projeção: <span class="equipe-met-pct ${projCl}">${brl(projVal)} (${projPct.toFixed(1)}%)</span></div>`;
+    } else if(meta > 0) {
+      projHtml = `<div class="equipe-met-meta" style="margin-top:4px;font-style:italic;color:var(--text2)">Projeção: aguardando primeiro dia</div>`;
     }
     return `
       <div class="equipe-metrica">
@@ -5885,13 +5915,13 @@ function renderCardMetasEquipe() {
   const metaInj     = m.meta_injetaveis_equipe   || 0;
 
   el.innerHTML = fonteHtml + `<div class="equipe-metricas-grid">` +
-    metrica("💰 Caixa",        tot.caixa,      metaCaixa)   +
-    metrica("💳 Crédito",      tot.credito,    metaCredito) +
-    metrica("📄 Boleto",       tot.boleto,     metaBoleto)  +
-    metrica("🧪 Lab",          tot.lab,        metaLab)     +
-    metrica("🩻 Imagem",       tot.img,        metaImg)     +
-    metrica("💉 Procedimentos",tot.proc,       metaProc)    +
-    metrica("💊 Injetáveis",   tot.injetaveis, metaInj)     +
+    metrica("💰 Caixa",        tot.caixa,      metaCaixa,   totBase.caixa)      +
+    metrica("💳 Crédito",      tot.credito,    metaCredito, totBase.credito)    +
+    metrica("📄 Boleto",       tot.boleto,     metaBoleto,  totBase.boleto)     +
+    metrica("🧪 Lab",          tot.lab,        metaLab,     totBase.lab)        +
+    metrica("🩻 Imagem",       tot.img,        metaImg,     totBase.img)        +
+    metrica("💉 Procedimentos",tot.proc,       metaProc,    totBase.proc)       +
+    metrica("💊 Injetáveis",   tot.injetaveis, metaInj,     totBase.injetaveis) +
     `</div>`;
 }
 
@@ -7496,6 +7526,21 @@ function getTotaisEquipeFatDiario(mesAnoStr) {
 // Boleto: reconstruído via _somarBoletoDoDoc (forma_pagamento_1/2 === "boleto")
 // porque o campo agregado `t.boleto` é SEMPRE 0 desde Abr/2026 (boleto vai
 // pra caixa). Espelha exatamente o que o Dashboard faz em getTotaisLancamentosPagosMes.
+// Filtra lançamentos por data_hora ESTRITAMENTE anterior a hoje 00:00.
+// Genérico — usado tanto pelo individual (lancMes) quanto pela equipe (equipeLancs).
+// Pra projeção: realizado-base deve excluir lançamentos de hoje, senão
+// o numerador inflado distorce a média (denominador já exclui hoje).
+function lancsAteOntem(lancs) {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  return (lancs || []).filter(l => {
+    const raw = l.data_hora;
+    const dh  = raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
+    if(!dh) return false;
+    const d = new Date(dh); d.setHours(0,0,0,0);
+    return d < hoje;
+  });
+}
+
 function agregarTotaisEquipeLancs(lancs) {
   const pagos     = lancs.filter(l => l.tipo === "entrada" && l.status === "pago");
   const saidasPar = lancs.filter(l => l.tipo === "saida"   && l.id_par);
