@@ -1610,6 +1610,10 @@
             <select id="rel-recep"><option value="">Todas</option></select>
           </div>
           <div class="fg" style="margin:0">
+            <label>🩺 Profissional</label>
+            <select id="rel-prescritor"><option value="">Todos</option></select>
+          </div>
+          <div class="fg" style="margin:0">
             <label>💳 Forma de pagamento</label>
             <select id="rel-forma">
               <option value="">Todas</option>
@@ -10997,6 +11001,8 @@ function iniciarRelatorios() {
 
   // Popula select de recepcionistas conforme o perfil logado
   preencherSelectRecepRelatorio();
+  // Popula select de profissionais a partir de PRESCRITORES
+  preencherSelectPrescritorRelatorio();
 
   // Popula select de Subtipo de Procedimento a partir de TIPOS_PROCEDIMENTO
   const selSub = document.getElementById("rel-subtipo");
@@ -11053,9 +11059,19 @@ function preencherSelectRecepRelatorio() {
     nomes.map(n => `<option value="${n}">${n}</option>`).join("");
 }
 
+// Lista vem da constante PRESCRITORES (mesma fonte do form de entrada),
+// em ordem alfabética. "Profissional Externo" fica ao final (posição na constante).
+function preencherSelectPrescritorRelatorio() {
+  const sel = document.getElementById("rel-prescritor");
+  if(!sel) return;
+  sel.innerHTML = `<option value="">Todos</option>` +
+    PRESCRITORES.map(([n]) => `<option value="${n}">${n}</option>`).join("");
+}
+
 function limparFiltrosRelatorio() {
-  document.getElementById("rel-recep").value     = "";
-  document.getElementById("rel-forma").value     = "";
+  document.getElementById("rel-recep").value      = "";
+  document.getElementById("rel-prescritor").value = "";
+  document.getElementById("rel-forma").value      = "";
   document.getElementById("rel-categoria").value = "";
   const inpPac = document.getElementById("rel-paciente");
   if(inpPac) inpPac.value = "";
@@ -11237,8 +11253,9 @@ function _mesesNoIntervalo(iniStr, fimStr) {
 async function gerarRelatorio() {
   const iniStr = document.getElementById("rel-data-ini").value;
   const fimStr = document.getElementById("rel-data-fim").value;
-  const recep  = document.getElementById("rel-recep").value || "";
-  const forma  = document.getElementById("rel-forma").value || "";
+  const recep      = document.getElementById("rel-recep").value || "";
+  const prescritor = document.getElementById("rel-prescritor").value || "";
+  const forma      = document.getElementById("rel-forma").value || "";
   const cat    = document.getElementById("rel-categoria").value || "";
   // Subtipo de procedimento — só relevante quando cat === "procedimentos"
   const subtipo = document.getElementById("rel-subtipo")?.value || "";
@@ -11291,6 +11308,7 @@ async function gerarRelatorio() {
 
     // Filtros da UI
     if(recep) docs = docs.filter(l => (l.usuario_nome || "") === recep);
+    if(prescritor) docs = docs.filter(l => (l.prescritor || l.medico || l.medico_solicitante || "") === prescritor);
     if(cat)   docs = docs.filter(l => _matchCategoria(l, cat));
     if(forma) docs = docs.filter(l => _matchFormaPagamento(l, forma));
     // Subtipo de procedimento — só vale se cat === "procedimentos" e subtipo selecionado.
