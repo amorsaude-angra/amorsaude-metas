@@ -2149,6 +2149,9 @@
       <div class="modal-sec-label">Fechamento do Mês</div>
       <div class="fg">
         <label>Caixa Realizado — Equipe (R$)</label>
+        <small style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;font-weight:400">
+          ⓘ Use a definição <strong>Caixa = PIX + Dinheiro + Débito + Boleto</strong> do mês (não inclui Crédito).
+        </small>
         <input type="text" id="mm-caixa-realizado-equipe" placeholder="0,00" oninput="mascaraValor(this)" />
       </div>
       <div class="fg">
@@ -2965,9 +2968,12 @@ function getTotaisFaturamentoDiario(mesAnoStr) {
     d => d.mes_ano === mesAnoStr && !d.feriado && (d.caixa + d.credito) > 0
   );
   return {
-    caixa:         docs.reduce((s, d) => s + (d.caixa                 || 0), 0),
+    // Caixa = PDD + Boleto (simétrico com caminho lançamentos, onde
+    // mapearFormaPagamento já joga boleto pra caixa — regra Abr/2026).
+    // fatDiario tem campos separados, então somamos os dois aqui.
+    caixa:         docs.reduce((s, d) => s + (d.caixa || 0) + (d.boleto || 0), 0),
     credito:       docs.reduce((s, d) => s + (d.credito               || 0), 0),
-    boleto:        docs.reduce((s, d) => s + (d.boleto                || 0), 0),
+    boleto:        docs.reduce((s, d) => s + (d.boleto                || 0), 0),   // informativo
     laboratorio:   docs.reduce((s, d) => s + (d.exameslaboratoriais   || 0), 0),
     imagem:        docs.reduce((s, d) => s + (d.imagem                || 0), 0),
     procedimentos: docs.reduce((s, d) => s + (d.procedimentos         || 0), 0),
@@ -3149,9 +3155,11 @@ function getTotaisPorDia(dataStr) {
   const doc = faturamentoDiarioAtual.find(d => d.data === dataStr);
   if(doc) {
     return {
-      caixa:         doc.caixa               || 0,
+      // Caixa = PDD + Boleto (simétrico com caminho lançamentos acima, onde
+      // mapearFormaPagamento já agrega boleto em caixa — regra Abr/2026).
+      caixa:         (doc.caixa || 0) + (doc.boleto || 0),
       credito:       doc.credito             || 0,
-      boleto:        doc.boleto              || 0,
+      boleto:        doc.boleto              || 0,   // informativo
       laboratorio:   doc.exameslaboratoriais || 0,
       imagem:        doc.imagem              || 0,
       procedimentos: doc.procedimentos       || 0,
@@ -6137,9 +6145,10 @@ function mudarModoDash(modo) {
 function calcTotaisFromHistoricoDocs(docs) {
   let caixa=0, credito=0, boleto=0, lab=0, img=0, proc=0, injetaveis=0, consultas=0;
   docs.forEach(d => {
-    caixa      += d.caixa         || 0;
+    // Caixa = PDD + Boleto (simétrico com agregadores de lançamentos)
+    caixa      += (d.caixa || 0) + (d.boleto || 0);
     credito    += d.credito       || 0;
-    boleto     += d.boleto        || 0;
+    boleto     += d.boleto        || 0;   // informativo
     lab        += d.laboratorio   || 0;
     img        += d.imagem        || 0;
     proc       += d.procedimentos || 0;
@@ -6928,14 +6937,15 @@ function renderResumoDia() {
   const metaSimul = Math.round((consultas + sessoes) * 0.15);
   setText("rd-meta-simul-auto", metaSimul.toString());
 
-  // Valor total produzido = Caixa Alcançado + Crédito Alcançado (apenas)
+  // Valor total produzido = Caixa (PDD+Boleto) + Crédito
   const valorProduzido = dia.caixa + dia.credito;
   setText("rd-valor-produzido", brl(valorProduzido));
 
-  // Total em PIX, Dinheiro, Débito e Boleto = Caixa do dia + Boleto do dia
-  // (regra Abr/2026: boleto já entra em caixa nos pagos via forma_pagamento, mas o
-  //  campo `boleto` separado ainda existe — somar ambos garante o número da planilha)
-  const totalPixDinDebBol = dia.caixa + dia.boleto;
+  // Total em PIX, Dinheiro, Débito e Boleto = Caixa do dia (que já agrega PDD +
+  // Boleto em todas as fontes — vide normalização em getTotaisPorDia /
+  // getTotaisFaturamentoDiario). NÃO somar dia.boleto separadamente —
+  // viraria dupla contagem.
+  const totalPixDinDebBol = dia.caixa;
   setText("rd-total-pix-din-deb-bol", brl(totalPixDinDebBol));
 
   // Linha 5 (tripla): Meta líquido (input) | Alcançado (auto) | Diferença (auto, verde/vermelho)
@@ -7512,9 +7522,10 @@ function mudarSubComp(sub) {
 function getTotaisEquipeFatDiario(mesAnoStr) {
   const docs = faturamentoDiarioAtual.filter(d => d.mes_ano === mesAnoStr);
   return {
-    caixa:      docs.reduce((s, d) => s + (d.caixa               || 0), 0),
+    // Caixa = PDD + Boleto (simétrico com agregarTotaisEquipeLancs)
+    caixa:      docs.reduce((s, d) => s + (d.caixa || 0) + (d.boleto || 0), 0),
     credito:    docs.reduce((s, d) => s + (d.credito             || 0), 0),
-    boleto:     docs.reduce((s, d) => s + (d.boleto              || 0), 0),
+    boleto:     docs.reduce((s, d) => s + (d.boleto              || 0), 0),   // informativo
     lab:        docs.reduce((s, d) => s + (d.exameslaboratoriais || 0), 0),
     img:        docs.reduce((s, d) => s + (d.imagem              || 0), 0),
     proc:       docs.reduce((s, d) => s + (d.procedimentos       || 0), 0),
