@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Amor Saúde — Metas Angra dos Reis</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -14,29 +14,19 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --primary: #175E63;
-      --primary-hover: #0E4448;
-      --secondary: #175E63;
+      --primary: #E8003D;
+      --primary-hover: #C5002F;
+      --secondary: #FF6B9D;
       --bg: #FFFFFF;
-      --bg2: #F4F4F2;
-      --text: #1C1D1A;
-      --text2: #6E706A;
-      --success: #1F6B32;
-      --warning: #8A5A08;
-      --border: #E3E3DF;
-      --shadow: 0 1px 2px rgba(28,29,26,0.04);
+      --bg2: #FFF5F7;
+      --text: #1A1A2E;
+      --text2: #6B7280;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --border: #E5E7EB;
+      --shadow: 0 2px 8px rgba(232,0,61,0.08);
       --r: 12px;
       --r2: 8px;
-
-      --page: #FAFAF9;
-      --progress-base: #2E8B4A;
-      --progress-subtle: #E7F3EA;
-      --attention-base: #D69A1E;
-      --attention-subtle: #FBF1DC;
-      --danger-strong: #A32D2D;
-      --info-base: #2E7CC4;
-      --track: #E3E3DF;
-      --track-fill: #5C5E58;
     }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
     .hidden { display: none !important; }
@@ -117,7 +107,7 @@
     .meta-info { display:flex; justify-content:space-between; font-size:13px; color:var(--text2); margin-bottom:12px; }
     .meta-info strong { color:var(--text); }
     .bar-wrap { background:#F3F4F6; border-radius:100px; height:8px; overflow:hidden; margin-bottom:6px; }
-    .bar-fill { height:100%; border-radius:100px; background:var(--track-fill); transition:width .6s ease; min-width:2px; }
+    .bar-fill { height:100%; border-radius:100px; background:linear-gradient(90deg,var(--primary),var(--secondary)); transition:width .6s ease; min-width:2px; }
     .bar-fill.ok { background:linear-gradient(90deg,var(--success),#34D399); }
     .meta-pct { font-size:13px; font-weight:600; color:var(--primary); text-align:right; }
     .meta-pct.ok { color:var(--success); }
@@ -479,7 +469,7 @@
     .rank-table tr:hover td { background:#FAFAFA; }
     .rank-medal { font-size:20px; }
     .rank-bar { height:5px; background:var(--border); border-radius:100px; margin-top:5px; overflow:hidden; min-width:60px; }
-    .rank-bar-fill { height:100%; border-radius:100px; background:var(--track-fill); }
+    .rank-bar-fill { height:100%; border-radius:100px; background:linear-gradient(90deg,var(--primary),var(--secondary)); }
     .prem-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; background:#FEF3C7; color:#B45309; border-radius:100px; font-size:11px; font-weight:600; }
 
     /* cards colaboradoras */
@@ -724,9 +714,6 @@
     .fat-sel-mes:focus { border-color:var(--primary); }
     .fat-import-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border:1.5px dashed var(--border); border-radius:var(--r2); font-size:13px; color:var(--text2); cursor:pointer; transition:all .2s; background:#fff; font-family:'Inter',sans-serif; font-weight:500; }
     .fat-import-badge:hover { border-color:var(--primary); color:var(--primary); }
-
-    .wordmark { font-family:'Fraunces',Georgia,serif; font-weight:500; letter-spacing:-0.015em; }
-    .num, table td, table th { font-variant-numeric: tabular-nums; font-feature-settings:"tnum" 1; }
   </style>
 </head>
 <body>
@@ -736,7 +723,7 @@
   <div class="login-box">
     <div class="login-logo">
       <div class="heart">❤️</div>
-      <div class="marca wordmark">Amor Saúde</div>
+      <div class="marca">Amor Saúde</div>
       <div class="sub">Angra dos Reis — Sistema de Metas</div>
     </div>
 
@@ -786,7 +773,7 @@
 
   <!-- Header fixo — deve vir ANTES das abas para o sticky funcionar corretamente -->
   <div id="header">
-    <div class="h-logo wordmark">Amor Saúde <span>Angra dos Reis</span></div>
+    <div class="h-logo">Amor Saúde <span>Angra dos Reis</span></div>
     <div class="h-right">
       <div class="badge-mes" id="badge-mes">—</div>
       <div id="auto-refresh-ind" title="Atualização automática a cada 2 minutos"
