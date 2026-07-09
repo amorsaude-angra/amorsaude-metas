@@ -744,7 +744,6 @@
         <optgroup label="Recepção">
           <option value="Yasmin Oliveira">Yasmin Oliveira</option>
           <option value="Yasmin Pimentel">Yasmin Pimentel</option>
-          <option value="Gabriela">Gabriela</option>
           <option value="Letícia">Letícia</option>
           <option value="Juliana">Juliana</option>
         </optgroup>
@@ -2351,7 +2350,6 @@ const USUARIOS = {
   "financeiro.angrarj@gmail.com":    { nome: "Karoane",         perfil: "subgestora",    labelCustom: "Financeiro",  uid: "xic5R9XCEWh87i4V74jPgPl1Bap1" },
   "yasminoliveira2404@icloud.com":   { nome: "Yasmin Oliveira", perfil: "recepcionista", uid: "eeQsPJl3imMTahadhDyjcVNBWMS2" },
   "leticia.eleoterio23@gmail.com":   { nome: "Letícia",         perfil: "recepcionista", uid: "wHh9a0mtyofUmWpFT0znli26LHM2" },
-  "gabrielacardosorocharj@gmail.com": { nome: "Gabriela",        perfil: "recepcionista", uid: "ZKUZ5vimhEg1r7Wq06YNqgzilo83" },
   "recepcao.angraams05@gmail.com":   { nome: "Juliana",         perfil: "recepcionista", uid: "bhWm7wccNpdNSXsU0dnO1P8qxdq1" },
   "yasmin.pimentel@hotmail.com":     { nome: "Yasmin Pimentel", perfil: "recepcionista", status: "afastada", uid: "HbDPzVrkrpbAPQsSNqLmIzXMpOO2" },
 };
@@ -2729,7 +2727,6 @@ const PREM_COLETIVA_ATIVOS = [
   "gsantospereira90@gmail.com",        // Gabriel (coordenador)
   "yasminoliveira2404@icloud.com",     // Yasmin Oliveira
   "leticia.eleoterio23@gmail.com",     // Letícia
-  "gabrielacardosorocharj@gmail.com",  // Gabriela
 ];
 
 // Defesa em profundidade: Yasmin Pimentel está afastada e será desativada
@@ -3315,7 +3312,7 @@ function calcularPremiacaoColetiva(totaisEquipe, meta, caixaRealizado, entregouL
 }
 
 // Parcela de produtos: total dividido em partes iguais entre ativos
-// (4 hoje: Gabriel + Yasmin O. + Letícia + Gabriela).
+// (3 hoje: Gabriel + Yasmin O. + Letícia).
 function parcelaProdutos(valorProdutos) {
   const n = PREM_COLETIVA_ATIVOS.length;
   if(n <= 0) return 0;
@@ -3540,7 +3537,6 @@ const SENHAS_LOCAL = {
   "Gabriel":           "Angra2026@",
   "Yasmin Oliveira":   "Angra2026@",
   "Yasmin Pimentel":   "Angra2026@",
-  "Gabriela":          "Angra2026@",
   "Letícia":           "Angra2026@",
   "Juliana":           "Angra2026@",
 };
