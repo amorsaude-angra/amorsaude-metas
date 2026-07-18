@@ -604,7 +604,7 @@
     .colab-grupo-header { background:#F3F4F6; padding:8px 14px; border-radius:var(--r2); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text2); margin:14px 0 8px; }
 
     /* ── ABAS LIDER / REC / CC / FINANCEIRO / COORD — sticky abaixo do header ── */
-    #lider-nav, #rec-nav, #gestor-nav, #coord-nav {
+    #lider-nav, #rec-nav, #gestor-nav, #coord-nav, #cc-nav, #cc-coord-nav {
       display:none;
       position:sticky;
       top:64px;          /* altura exata do header */
@@ -617,7 +617,7 @@
       overflow-x:auto;   /* scroll horizontal em mobile */
       -webkit-overflow-scrolling:touch;
     }
-    #lider-nav.show, #rec-nav.show, #gestor-nav.show, #coord-nav.show { display:flex; }
+    #lider-nav.show, #rec-nav.show, #gestor-nav.show, #coord-nav.show, #cc-nav.show, #cc-coord-nav.show { display:flex; }
     .lider-tab {
       padding:14px 28px; font-size:14px; font-weight:600; cursor:pointer;
       border:none; background:transparent; color:var(--text2);
@@ -827,6 +827,21 @@
 
   <div id="coord-nav">
     <button class="lider-tab active" id="coord-tab-rel" onclick="mudarAbaCoord('relatorios')">📊 Relatórios</button>
+  </div>
+
+  <!-- Navegação por abas — atendentes de call center (3 abas, sem Equipe/NF/Dashboard) -->
+  <div id="cc-nav">
+    <button class="lider-tab active" id="cc-tab-metas" onclick="mudarAbaCC('metas')">🎯 Meta e Premiação</button>
+    <button class="lider-tab"        id="cc-tab-orc"   onclick="mudarAbaCC('orcamentos')">📋 Acompanhamento</button>
+    <button class="lider-tab"        id="cc-tab-lanc"  onclick="mudarAbaCC('lancamentos')">📝 Orçamento</button>
+  </div>
+
+  <!-- Navegação por abas — coordenação call center (4 abas: lança + vê equipe do CC) -->
+  <div id="cc-coord-nav">
+    <button class="lider-tab active" id="cc-coord-tab-metas"  onclick="mudarAbaCCCoord('metas')">🎯 Meta e Premiação</button>
+    <button class="lider-tab"        id="cc-coord-tab-orc"    onclick="mudarAbaCCCoord('orcamentos')">📋 Acompanhamento</button>
+    <button class="lider-tab"        id="cc-coord-tab-lanc"   onclick="mudarAbaCCCoord('lancamentos')">📝 Orçamento</button>
+    <button class="lider-tab"        id="cc-coord-tab-equipe" onclick="mudarAbaCCCoord('equipe')">📊 Equipe</button>
   </div>
 
   <div id="app">
@@ -2435,8 +2450,8 @@ const METAS_EQUIPE_PADRAO = {
 
 // Perfis que têm meta de crédito
 const TEM_CREDITO = ["recepcionista","lider"];
-// Perfis que fazem lançamento
-const FAZ_LANC = ["recepcionista","lider"];
+// Perfis que fazem lançamento (Etapa 2 call center: atendentes e coord também lançam)
+const FAZ_LANC = ["recepcionista","lider","callcenter","callcenter_coord"];
 // Perfis que vêem o dashboard geral
 const VE_DASHBOARD = ["gestor","subgestora","lider"];
 // Perfis que SÓ vêem o dashboard geral (sem aba de lançamento)
@@ -2883,6 +2898,10 @@ let dashSubComp = "dias_uteis";
 let abaLider = "lancamentos";
 // Aba ativa das recepcionistas ("lancamentos" | "metas" | "equipe")
 let abaRec = "lancamentos";
+// Aba ativa das atendentes de call center ("lancamentos" | "metas" | "orcamentos")
+let abaCC = "metas";
+// Aba ativa da coordenação call center ("lancamentos" | "metas" | "equipe" | "orcamentos")
+let abaCCCoord = "metas";
 
 // Aba ativa da seção de prescritores ("prescritor" | "comparativo" | "area")
 let abaPrescritor = "prescritor";
@@ -3818,6 +3837,10 @@ function iniciarApp() {
   const ehCoord      = VE_COORD.includes(perfil);
   const ehFinanceiro = SO_RELATORIOS.includes(perfil);
   const ehCoordPura  = perfil === "coordenadora";
+  // Call Center (Etapa 2): navs dedicados; visibilidade das seções controlada
+  // por aplicarAbaCC/CCCoord (mesmo padrão de ehLider/ehRec).
+  const ehCC         = perfil === "callcenter";
+  const ehCCCoord    = perfil === "callcenter_coord";
 
   fecharBanner();
 
@@ -3856,6 +3879,22 @@ function iniciarApp() {
     aplicarAbaCoord();
   }
 
+  // Barra de abas — atendente call center: 3 abas (Metas, Orçamentos, Lançamento)
+  document.getElementById("cc-nav").classList.toggle("show", ehCC);
+  if(ehCC) {
+    const saved = localStorage.getItem("as_aba_cc");
+    abaCC = ["lancamentos","metas","orcamentos"].includes(saved) ? saved : "metas";
+    aplicarAbaCC();
+  }
+
+  // Barra de abas — coord call center: 4 abas (Metas, Orçamentos, Lançamento, Equipe)
+  document.getElementById("cc-coord-nav").classList.toggle("show", ehCCCoord);
+  if(ehCCCoord) {
+    const saved = localStorage.getItem("as_aba_cc_coord");
+    abaCCCoord = ["lancamentos","metas","orcamentos","equipe"].includes(saved) ? saved : "metas";
+    aplicarAbaCCCoord();
+  }
+
   // Financeiro: só Relatórios (sem nav próprio — esconde tudo e mostra Relatórios)
   if(ehFinanceiro) {
     // Esconde TODAS as outras seções; deixa só Relatórios.
@@ -3881,12 +3920,12 @@ function iniciarApp() {
   // Card equipe — visível para quem faz lançamento (exceto gestor/subgestora)
   // Para perfis com abas próprias, a visibilidade é controlada por aplicarAbaXxx()
   const verEquipe = (temLanc || ehCoord) && !SO_DASHBOARD.includes(perfil);
-  if(!ehLider && !ehRec) {
+  if(!ehLider && !ehRec && !ehCC && !ehCCCoord) {
     document.getElementById("sec-card-equipe").style.display = verEquipe ? "" : "none";
   }
 
   // Seções de lançamento — para perfis com abas, controlado por aplicarAbaXxx()
-  if(!ehLider && !ehRec) {
+  if(!ehLider && !ehRec && !ehCC && !ehCCCoord) {
     document.getElementById("sec-metas").style.display     = temLanc ? "" : "none";
     document.getElementById("sec-resumo").style.display    = temLanc ? "" : "none";
     document.getElementById("sec-lanc").style.display      = temLanc ? "" : "none";
@@ -3934,7 +3973,9 @@ function iniciarApp() {
   if(temLanc)      iniciarListener();
   // Rec/CC: inicia equipe imediatamente (pool calc necessário para aba Metas)
   // Lider e liderCC: listener iniciado por aplicarAbaLider/CC quando sai do dashboard
-  if(verEquipe && !ehLider) iniciarListenerEquipe();
+  // Atendente call center (ehCC): NÃO precisa listener de equipe (rules bloqueiam
+  // leitura de docs alheios; aba Equipe não existe pra ela).
+  if(verEquipe && !ehLider && !ehCC) iniciarListenerEquipe();
   // Faturamento diário: carrega para gestora, subgestora e líderes
   if(temDashboard) carregarFaturamentoDiario();
 
@@ -4158,6 +4199,76 @@ function mudarAbaCoord(aba) {
   abaCoord = aba;
   localStorage.setItem("as_aba_coord", aba);
   aplicarAbaCoord();
+}
+
+// Aplica visibilidade das seções conforme aba ativa da atendente de call center
+// (3 abas: Metas, Orçamentos, Lançamento — SEM Equipe, Dashboard, NF, Relatórios)
+function aplicarAbaCC() {
+  const emLanc  = abaCC === "lancamentos";
+  const emMetas = abaCC === "metas";
+  const emOrc   = abaCC === "orcamentos";
+
+  ["metas","orc","lanc"].forEach(t => {
+    const el = document.getElementById(`cc-tab-${t}`);
+    if(!el) return;
+    const aba = t==="lanc"?"lancamentos":t==="orc"?"orcamentos":t;
+    el.classList.toggle("active", abaCC === aba);
+  });
+
+  document.getElementById("sec-metas").style.display       = emMetas ? "" : "none";
+  document.getElementById("sec-orcamentos").style.display  = emOrc   ? "" : "none";
+  document.getElementById("sec-lanc").style.display        = emLanc  ? "" : "none";
+  document.getElementById("sec-resumo").style.display      = emLanc  ? "" : "none";
+  document.getElementById("sec-tabela").style.display      = emLanc  ? "" : "none";
+  document.getElementById("sec-historico").style.display   = emLanc  ? "" : "none";
+  // Nunca visível pra atendente (Etapa 2 — isolamento)
+  document.getElementById("sec-card-equipe").style.display = "none";
+  document.getElementById("sec-dashboard").style.display   = "none";
+  document.getElementById("sec-nf").style.display          = "none";
+  document.getElementById("sec-relatorios").style.display  = "none";
+
+  if(emOrc) renderKanbanOrcamentos();
+}
+function mudarAbaCC(aba) {
+  abaCC = aba;
+  localStorage.setItem("as_aba_cc", aba);
+  aplicarAbaCC();
+}
+
+// Aplica visibilidade das seções conforme aba ativa da coord call center
+// (4 abas: Metas, Orçamentos, Lançamento, Equipe — SEM Dashboard, NF, Relatórios)
+function aplicarAbaCCCoord() {
+  const emLanc   = abaCCCoord === "lancamentos";
+  const emMetas  = abaCCCoord === "metas";
+  const emOrc    = abaCCCoord === "orcamentos";
+  const emEquipe = abaCCCoord === "equipe";
+
+  ["metas","orc","lanc","equipe"].forEach(t => {
+    const el = document.getElementById(`cc-coord-tab-${t}`);
+    if(!el) return;
+    const aba = t==="lanc"?"lancamentos":t==="orc"?"orcamentos":t;
+    el.classList.toggle("active", abaCCCoord === aba);
+  });
+
+  document.getElementById("sec-metas").style.display       = emMetas  ? "" : "none";
+  document.getElementById("sec-orcamentos").style.display  = emOrc    ? "" : "none";
+  document.getElementById("sec-lanc").style.display        = emLanc   ? "" : "none";
+  document.getElementById("sec-resumo").style.display      = emLanc   ? "" : "none";
+  document.getElementById("sec-tabela").style.display      = emLanc   ? "" : "none";
+  document.getElementById("sec-historico").style.display   = emLanc   ? "" : "none";
+  document.getElementById("sec-card-equipe").style.display = emEquipe ? "" : "none";
+  // Nunca visível pra coord CC (Etapa 2 — isolamento)
+  document.getElementById("sec-dashboard").style.display   = "none";
+  document.getElementById("sec-nf").style.display          = "none";
+  document.getElementById("sec-relatorios").style.display  = "none";
+
+  if(emOrc)    renderKanbanOrcamentos();
+  if(emEquipe) renderCardMetasEquipe();
+}
+function mudarAbaCCCoord(aba) {
+  abaCCCoord = aba;
+  localStorage.setItem("as_aba_cc_coord", aba);
+  aplicarAbaCCCoord();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4422,6 +4533,10 @@ function atualizarProj(caixaAtual, metaCaixa, credito, metaCredito, caixaBase, c
 async function calcularRanking() {
   const { perfil, nome } = usuario;
   if(!FAZ_LANC.includes(perfil)) return;
+  // Ranking Angra hoje é só da RECEPÇÃO (query hardcoded recepcionista/lider).
+  // Call center tem sistema próprio (Etapa 3) — early-return evita UX estranho
+  // ("Nenhum lançamento ainda / Entre N colaboradoras" onde N é da recep).
+  if(perfil === "callcenter" || perfil === "callcenter_coord") return;
 
   try {
     const snap = await db.collection("lancamentos")
@@ -5891,8 +6006,17 @@ function fecharBanner() {
 function iniciarListenerEquipe() {
   if(unsubEquipe) { unsubEquipe(); unsubEquipe=null; }
 
+  // Escopo por área — cada área vê só sua própria equipe. Sem esse filtro,
+  // recepção passaria a somar totais de call center quando o CC começar a
+  // lançar (regressão). Call center coord respeita o mesmo padrão via rules.
+  const perfil = usuario?.perfil || "";
+  const perfisArea = (perfil === "callcenter" || perfil === "callcenter_coord")
+    ? ["callcenter","callcenter_coord"]
+    : ["recepcionista","lider"];
+
   unsubEquipe = db.collection("lancamentos")
     .where("mes_ano","==",mesAno)
+    .where("perfil","in",perfisArea)
     .onSnapshot(snap => {
       equipeLancs = snap.docs.map(d => ({id:d.id,...d.data()})).filter(l => l.excluido !== true);
       renderCardMetasEquipe();
@@ -8761,7 +8885,9 @@ function filtrarOrcamentosPorPerfil(lista) {
   if(SO_DASHBOARD.includes(perfil)) return lista; // gestora/subgestora vê tudo
   // Schema novo (Fase B): doc grava `usuario_nome` e `perfil`.
   if(perfil === "lider")            return lista.filter(o => o.perfil === "recepcionista" || o.perfil === "lider");
-  // recepcionista: só os próprios
+  // Coord call center: vê tudo da equipe de call center (atendentes + coord)
+  if(perfil === "callcenter_coord") return lista.filter(o => o.perfil === "callcenter"    || o.perfil === "callcenter_coord");
+  // recepcionista / atendente call center / demais: só os próprios
   return lista.filter(o => o.usuario_nome === nome);
 }
 
@@ -8774,6 +8900,7 @@ function podeEditarOrcamento(o) {
   if(SO_DASHBOARD.includes(perfil)) return false; // gestora/subgestora só vê
   if(o.usuario_nome === usuario.nome) return true;
   if(perfil === "lider"            && (o.perfil === "recepcionista" || o.perfil === "lider")) return true;
+  if(perfil === "callcenter_coord" && (o.perfil === "callcenter"    || o.perfil === "callcenter_coord")) return true;
   return false;
 }
 

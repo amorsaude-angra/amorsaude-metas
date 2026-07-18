@@ -8,7 +8,7 @@ service cloud.firestore {
     match /lancamentos/{docId} {
       allow read: if request.auth != null &&
         (resource.data.usuario_id == request.auth.uid ||
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['gestor', 'subgestora', 'lider', 'coordenador', 'coordenadora', 'recepcionista', 'financeiro']);
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['gestor', 'subgestora', 'lider', 'coordenador', 'coordenadora', 'recepcionista', 'financeiro', 'callcenter', 'callcenter_coord']);
       allow create: if request.auth != null &&
         request.resource.data.usuario_id == request.auth.uid &&
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil != 'financeiro';
@@ -103,7 +103,7 @@ service cloud.firestore {
         request.resource.data.criado_por_uid == request.auth.uid;
       allow update, delete: if request.auth != null &&
         (resource.data.criado_por_uid == request.auth.uid ||
-         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['gestor', 'subgestora', 'lider', 'coordenador', 'coordenadora']);
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['gestor', 'subgestora', 'lider', 'coordenador', 'coordenadora', 'callcenter_coord']);
     }
 
     // Config de backup: metadata do último backup completo (data, usuário, totais).
