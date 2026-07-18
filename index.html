@@ -829,11 +829,12 @@
     <button class="lider-tab active" id="coord-tab-rel" onclick="mudarAbaCoord('relatorios')">📊 Relatórios</button>
   </div>
 
-  <!-- Navegação por abas — atendentes de call center (3 abas, sem Equipe/NF/Dashboard) -->
+  <!-- Navegação por abas — atendentes de call center (4 abas, sem NF/Dashboard) -->
   <div id="cc-nav">
-    <button class="lider-tab active" id="cc-tab-metas" onclick="mudarAbaCC('metas')">🎯 Meta e Premiação</button>
-    <button class="lider-tab"        id="cc-tab-orc"   onclick="mudarAbaCC('orcamentos')">📋 Acompanhamento</button>
-    <button class="lider-tab"        id="cc-tab-lanc"  onclick="mudarAbaCC('lancamentos')">📝 Orçamento</button>
+    <button class="lider-tab active" id="cc-tab-metas"  onclick="mudarAbaCC('metas')">🎯 Meta e Premiação</button>
+    <button class="lider-tab"        id="cc-tab-orc"    onclick="mudarAbaCC('orcamentos')">📋 Acompanhamento</button>
+    <button class="lider-tab"        id="cc-tab-lanc"   onclick="mudarAbaCC('lancamentos')">📝 Orçamento</button>
+    <button class="lider-tab"        id="cc-tab-equipe" onclick="mudarAbaCC('equipe')">📊 Equipe</button>
   </div>
 
   <!-- Navegação por abas — coordenação call center (4 abas: lança + vê equipe do CC) -->
@@ -2165,11 +2166,6 @@
         <label>Meta de Crédito — Recepção (R$)</label>
         <input type="text" id="mm-credito-recepcao" placeholder="0,00" oninput="mascaraValor(this)" />
       </div>
-      <div class="modal-sec-label">Call Center</div>
-      <div class="fg">
-        <label>Meta de Caixa — Call Center (equipe) (R$)</label>
-        <input type="text" id="mm-caixa-callcenter-equipe" placeholder="0,00" oninput="mascaraValor(this)" />
-      </div>
       <div class="modal-sec-label">Exames &amp; Procedimentos</div>
       <div class="fg">
         <label>Meta Exames Laboratoriais (R$)</label>
@@ -2451,9 +2447,6 @@ const METAS_EQUIPE_PADRAO = {
   meta_img_equipe:                0,
   meta_proc_equipe:               0,
   meta_injetaveis_equipe:         0,
-  // Call Center Etapa 3: meta única de caixa da equipe. Meses antigos ficam
-  // com 0 (card mostra "Meta não definida" via guard existente em metrica()).
-  meta_caixa_callcenter_equipe:   0,
 };
 
 // Perfis que têm meta de crédito
@@ -2906,7 +2899,7 @@ let dashSubComp = "dias_uteis";
 let abaLider = "lancamentos";
 // Aba ativa das recepcionistas ("lancamentos" | "metas" | "equipe")
 let abaRec = "lancamentos";
-// Aba ativa das atendentes de call center ("lancamentos" | "metas" | "orcamentos")
+// Aba ativa das atendentes de call center ("lancamentos" | "metas" | "orcamentos" | "equipe")
 let abaCC = "metas";
 // Aba ativa da coordenação call center ("lancamentos" | "metas" | "equipe" | "orcamentos")
 let abaCCCoord = "metas";
@@ -3416,7 +3409,13 @@ function renderPremColetiva(containerId, lancs, mesAnoArg, meta) {
   // Quem não é gestão nem está nos ativos não vê (financeiro etc.)
   if(!ehGestao && !ehAtivo) { el.innerHTML = ""; return; }
 
-  const totaisEquipe   = agregarTotaisEquipeLancs(lancs || []);
+  // BLINDAGEM: premiação coletiva é da RECEPÇÃO (Gabriel/Yasmin O./Letícia).
+  // Filtra lancs a recep+lider ANTES de agregar — assim, mesmo que quem chame
+  // (iniciarListenerEquipe ou dashListener) passe um `lancs` já integrado com
+  // call center, o pool de prêmio (totaisEquipe.lab/img/proc/injetaveis)
+  // continua contendo APENAS o que a recepção produziu.
+  const lancsRecep     = (lancs || []).filter(l => l.perfil === "recepcionista" || l.perfil === "lider");
+  const totaisEquipe   = agregarTotaisEquipeLancs(lancsRecep);
   const caixaRealizado = Number(meta?.caixa_realizado_equipe) || 0;
   const entregouLucro  = !!meta?.entregou_lucro;
   const prem = calcularPremiacaoColetiva(totaisEquipe, meta, caixaRealizado, entregouLucro);
@@ -3887,11 +3886,11 @@ function iniciarApp() {
     aplicarAbaCoord();
   }
 
-  // Barra de abas — atendente call center: 3 abas (Metas, Orçamentos, Lançamento)
+  // Barra de abas — atendente call center: 4 abas (Metas, Orçamentos, Lançamento, Equipe)
   document.getElementById("cc-nav").classList.toggle("show", ehCC);
   if(ehCC) {
     const saved = localStorage.getItem("as_aba_cc");
-    abaCC = ["lancamentos","metas","orcamentos"].includes(saved) ? saved : "metas";
+    abaCC = ["lancamentos","metas","orcamentos","equipe"].includes(saved) ? saved : "metas";
     aplicarAbaCC();
   }
 
@@ -3979,11 +3978,11 @@ function iniciarApp() {
   carregarMetas();
   if(temDashboard) iniciarDashboard();
   if(temLanc)      iniciarListener();
-  // Rec/CC: inicia equipe imediatamente (pool calc necessário para aba Metas)
-  // Lider e liderCC: listener iniciado por aplicarAbaLider/CC quando sai do dashboard
-  // Atendente call center (ehCC): NÃO precisa listener de equipe (rules bloqueiam
-  // leitura de docs alheios; aba Equipe não existe pra ela).
-  if(verEquipe && !ehLider && !ehCC) iniciarListenerEquipe();
+  // Rec/CC: inicia equipe imediatamente (pool calc necessário para aba Metas).
+  // Lider: listener iniciado por aplicarAbaLider quando sai do dashboard.
+  // Atendente CC (integração modelo Joinville): agora VÊ o card geral, então
+  // também dispara o listener aqui — rules já permitem (Etapa 2).
+  if(verEquipe && !ehLider) iniciarListenerEquipe();
   // Faturamento diário: carrega para gestora, subgestora e líderes
   if(temDashboard) carregarFaturamentoDiario();
 
@@ -4210,32 +4209,34 @@ function mudarAbaCoord(aba) {
 }
 
 // Aplica visibilidade das seções conforme aba ativa da atendente de call center
-// (3 abas: Metas, Orçamentos, Lançamento — SEM Equipe, Dashboard, NF, Relatórios)
+// (4 abas: Metas, Orçamentos, Lançamento, Equipe — SEM Dashboard, NF, Relatórios)
 function aplicarAbaCC() {
-  const emLanc  = abaCC === "lancamentos";
-  const emMetas = abaCC === "metas";
-  const emOrc   = abaCC === "orcamentos";
+  const emLanc   = abaCC === "lancamentos";
+  const emMetas  = abaCC === "metas";
+  const emOrc    = abaCC === "orcamentos";
+  const emEquipe = abaCC === "equipe";
 
-  ["metas","orc","lanc"].forEach(t => {
+  ["metas","orc","lanc","equipe"].forEach(t => {
     const el = document.getElementById(`cc-tab-${t}`);
     if(!el) return;
     const aba = t==="lanc"?"lancamentos":t==="orc"?"orcamentos":t;
     el.classList.toggle("active", abaCC === aba);
   });
 
-  document.getElementById("sec-metas").style.display       = emMetas ? "" : "none";
-  document.getElementById("sec-orcamentos").style.display  = emOrc   ? "" : "none";
-  document.getElementById("sec-lanc").style.display        = emLanc  ? "" : "none";
-  document.getElementById("sec-resumo").style.display      = emLanc  ? "" : "none";
-  document.getElementById("sec-tabela").style.display      = emLanc  ? "" : "none";
-  document.getElementById("sec-historico").style.display   = emLanc  ? "" : "none";
-  // Nunca visível pra atendente (Etapa 2 — isolamento)
-  document.getElementById("sec-card-equipe").style.display = "none";
+  document.getElementById("sec-metas").style.display       = emMetas  ? "" : "none";
+  document.getElementById("sec-orcamentos").style.display  = emOrc    ? "" : "none";
+  document.getElementById("sec-lanc").style.display        = emLanc   ? "" : "none";
+  document.getElementById("sec-resumo").style.display      = emLanc   ? "" : "none";
+  document.getElementById("sec-tabela").style.display      = emLanc   ? "" : "none";
+  document.getElementById("sec-historico").style.display   = emLanc   ? "" : "none";
+  document.getElementById("sec-card-equipe").style.display = emEquipe ? "" : "none";
+  // Nunca visível pra atendente (permissões restritas — dashboard/NF/Relatórios)
   document.getElementById("sec-dashboard").style.display   = "none";
   document.getElementById("sec-nf").style.display          = "none";
   document.getElementById("sec-relatorios").style.display  = "none";
 
-  if(emOrc) renderKanbanOrcamentos();
+  if(emOrc)    renderKanbanOrcamentos();
+  if(emEquipe) renderCardMetasEquipe();
 }
 function mudarAbaCC(aba) {
   abaCC = aba;
@@ -4428,13 +4429,12 @@ function atualizarCards() {
     const lancMesBase = lancsAteOntem(lancMes);
     ({ caixa: caixaBase, credito: creditoBase } = calcTotais(lancMesBase));
   }
-  // Call Center: SEM meta individual (Etapa 3 = meta única equipe). Card
-  // individual usa meta_caixa_callcenter_equipe como referência — atendente
-  // vê a própria contribuição vs a meta coletiva.
+  // Call Center: SEM meta individual (decisão pós-Etapa 3 — integração ao
+  // caixa geral). Card individual continua mostrando o realizado próprio
+  // (calcTotais(lancMes)); meta fica 0 → cardMeta renderiza barra vazia,
+  // que é aceitável enquanto não houver quota individual pra CC.
   const ehCC        = (perfil === "callcenter" || perfil === "callcenter_coord");
-  const metaCaixa   = ehCC
-                      ? (metas.meta_caixa_callcenter_equipe || 0)
-                      : (metas.meta_caixa_recepcao          || 0);
+  const metaCaixa   = ehCC ? 0 : (metas.meta_caixa_recepcao || 0);
   const metaCredito = metas.meta_credito_recepcao||0;
   const contBoleto  = lancMes.filter(_ehLancBoleto).length;
   contBoletoBase    = historicoIndividual
@@ -6022,17 +6022,12 @@ function fecharBanner() {
 function iniciarListenerEquipe() {
   if(unsubEquipe) { unsubEquipe(); unsubEquipe=null; }
 
-  // Escopo por área — cada área vê só sua própria equipe. Sem esse filtro,
-  // recepção passaria a somar totais de call center quando o CC começar a
-  // lançar (regressão). Call center coord respeita o mesmo padrão via rules.
-  const perfil = usuario?.perfil || "";
-  const perfisArea = (perfil === "callcenter" || perfil === "callcenter_coord")
-    ? ["callcenter","callcenter_coord"]
-    : ["recepcionista","lider"];
-
+  // Integração CC (modelo Joinville): sem filtro de perfil — call center soma
+  // no card "Metas da Equipe" junto com recepção. Premiação Coletiva é
+  // blindada em renderPremColetiva (filtra recep+lider antes da agregação),
+  // então integrar aqui NÃO infla o pool de prêmio.
   unsubEquipe = db.collection("lancamentos")
     .where("mes_ano","==",mesAno)
-    .where("perfil","in",perfisArea)
     .onSnapshot(snap => {
       equipeLancs = snap.docs.map(d => ({id:d.id,...d.data()})).filter(l => l.excluido !== true);
       renderCardMetasEquipe();
@@ -6090,19 +6085,6 @@ function renderCardMetasEquipe() {
           ${projHtml}
         ` : '<div class="equipe-met-meta">Meta não definida</div>'}
       </div>`;
-  }
-
-  // Call Center (Etapa 3): card único de Caixa. equipeLancs já está escopado
-  // por área via iniciarListenerEquipe (Etapa 2), então tot.caixa é APENAS
-  // callcenter+callcenter_coord — não vaza recepção. Meses antes do MARCO
-  // (Mai/2026) ficam com tot=0 (CC não existia); retrocompat OK.
-  const perfilViewer = usuario?.perfil;
-  if(perfilViewer === "callcenter" || perfilViewer === "callcenter_coord") {
-    const metaCaixaCC = m.meta_caixa_callcenter_equipe || 0;
-    el.innerHTML = fonteHtml + `<div class="equipe-metricas-grid">` +
-      metrica("💰 Caixa Call Center", tot.caixa, metaCaixaCC, totBase.caixa) +
-      `</div>`;
-    return;
   }
 
   const metaCaixa   = m.meta_caixa_equipe        || METAS_EQUIPE_PADRAO.meta_caixa_equipe;
@@ -8313,7 +8295,6 @@ function abrirModalMetas() {
   set("mm-dias-uteis",       m.dias_uteis            || 22);
   set("mm-caixa-recepcao",   m.meta_caixa_recepcao   || 0);
   set("mm-credito-recepcao", m.meta_credito_recepcao || 0);
-  set("mm-caixa-callcenter-equipe", m.meta_caixa_callcenter_equipe || 0);
   set("mm-lab",              m.meta_lab_equipe        || 0);
   set("mm-img",              m.meta_img_equipe        || 0);
   set("mm-proc",             m.meta_proc_equipe       || 0);
@@ -8342,7 +8323,6 @@ async function salvarModalMetas() {
     dias_uteis:            getN("mm-dias-uteis"),
     meta_caixa_recepcao:   get("mm-caixa-recepcao"),
     meta_credito_recepcao: get("mm-credito-recepcao"),
-    meta_caixa_callcenter_equipe: get("mm-caixa-callcenter-equipe"),
     meta_lab_equipe:            get("mm-lab"),
     meta_img_equipe:            get("mm-img"),
     meta_proc_equipe:           get("mm-proc"),
