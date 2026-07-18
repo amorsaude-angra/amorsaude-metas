@@ -747,6 +747,13 @@
           <option value="Letícia">Letícia</option>
           <option value="Juliana">Juliana</option>
         </optgroup>
+        <optgroup label="Call Center">
+          <option value="Naiara">Naiara</option>
+          <option value="Davy">Davy</option>
+          <option value="Alerrandro">Alerrandro</option>
+          <option value="Millena">Millena</option>
+          <option value="Jaiane">Jaiane</option>
+        </optgroup>
       </select>
     </div>
 
@@ -2356,7 +2363,10 @@ const auth = firebase.auth();
 // Chave = email do Firebase Auth; valor = { nome, perfil, [labelCustom], [status], [uid] }
 // labelCustom sobrescreve PERFIL_LABEL na UI (header + ranking) via labelPerfilDe().
 // status="afastada" bloqueia login. uid é só referência humana (lookup é por email).
-// Perfis: gestor, subgestora, lider, recepcionista, financeiro.
+// Perfis: gestor, subgestora, lider, recepcionista, financeiro,
+//         callcenter_coord, callcenter.
+// Call Center (Etapa 1): perfis criados mas SEM entrada em arrays de permissão
+// (FAZ_LANC, VE_DASHBOARD, etc.) — Etapa 2 define visibilidade e telas.
 const USUARIOS = {
   "laudi.rmj@gmail.com":             { nome: "Laudenir",        perfil: "gestor",        uid: "UOyBt0cwuIR7YcLgq8lriIDpi8E3" },
   "eduardaaraujo1502@gmail.com":     { nome: "Eduarda",         perfil: "subgestora",    uid: "DDTWfzgKcZcQbpdQFbtsgUbDsx12" },
@@ -2366,6 +2376,11 @@ const USUARIOS = {
   "leticia.eleoterio23@gmail.com":   { nome: "Letícia",         perfil: "recepcionista", uid: "wHh9a0mtyofUmWpFT0znli26LHM2" },
   "recepcao.angraams05@gmail.com":   { nome: "Juliana",         perfil: "recepcionista", uid: "bhWm7wccNpdNSXsU0dnO1P8qxdq1" },
   "yasmin.pimentel@hotmail.com":     { nome: "Yasmin Pimentel", perfil: "recepcionista", status: "afastada", uid: "HbDPzVrkrpbAPQsSNqLmIzXMpOO2" },
+  "naiaraa.buarque@gmail.com":       { nome: "Naiara",          perfil: "callcenter_coord", uid: "BwgujeP2bOU0J2aQcqBZb0ds1FF3" },
+  "atendimentoamsangra04@gmail.com": { nome: "Davy",            perfil: "callcenter",       uid: "i6hzfsTB4pTqrByYyN2ccl25Udo2" },
+  "atendimentoamsangra03@gmail.com": { nome: "Alerrandro",      perfil: "callcenter",       uid: "8vv0YfZj4BPDfLwMRSoFawY8NHI3" },
+  "atendimentoamsangra02@gmail.com": { nome: "Millena",         perfil: "callcenter",       uid: "APIkQjxpuNRPiH8mN33nMu8RXRZ2" },
+  "atendimentoamsangra01@gmail.com": { nome: "Jaiane",          perfil: "callcenter",       uid: "rYfrD7wRkdhTpsnUIfIhdC8GA8N2" },
 };
 
 // Mapa derivado: nome → perfil (para lookups internos por nome de exibição)
@@ -2393,7 +2408,9 @@ const PERFIL_LABEL = {
   coordenador:"Coordenador", coordenadora:"Coordenadora",
   lider:"Líder",
   recepcionista:"Recepcionista Médica",
-  financeiro:"Financeiro"
+  financeiro:"Financeiro",
+  callcenter:"Call Center",
+  callcenter_coord:"Coordenação Call Center"
 };
 
 // Label de perfil pra UI: prioriza labelCustom do USUARIOS (override por usuária),
@@ -3553,6 +3570,11 @@ const SENHAS_LOCAL = {
   "Yasmin Pimentel":   "Angra2026@",
   "Letícia":           "Angra2026@",
   "Juliana":           "Angra2026@",
+  "Naiara":            "Angra2026@",
+  "Davy":              "Angra2026@",
+  "Alerrandro":        "Angra2026@",
+  "Millena":           "Angra2026@",
+  "Jaiane":            "Angra2026@",
 };
 
 // Login: tenta Firebase Auth; se não configurado, usa senha local como fallback
