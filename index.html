@@ -1121,6 +1121,13 @@
       <!-- Cards resumo equipe -->
       <div class="dash-equipe-grid" id="dash-cards-equipe"></div>
 
+      <!-- Vendas Call Center (só realizado, sem meta) — respeita filtro
+           de modo (dia/semana/mês) via lista passada em renderDashboard. -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title">📞 Vendas Call Center</div>
+        <div id="dash-vendas-cc"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+      </div>
+
       <!-- Ranking -->
       <div class="card" style="margin-bottom:20px">
         <div class="card-title">🏆 Ranking do Mês</div>
@@ -1311,9 +1318,17 @@
 
     <!-- ── CARD METAS DA EQUIPE (recepcionista/lider) ── -->
     <div id="sec-card-equipe" style="display:none">
-      <div class="card" style="margin-bottom:0">
+      <div class="card" style="margin-bottom:14px">
         <div class="equipe-card-tit">🎯 Metas da Equipe</div>
         <div id="equipe-metricas">
+          <div class="loading"><div class="spinner"></div>Carregando...</div>
+        </div>
+      </div>
+      <!-- Vendas Call Center (acompanhamento sem meta) — 7 métricas filtradas
+           a lançamentos de perfil callcenter/callcenter_coord no mês. -->
+      <div class="card" style="margin-bottom:0">
+        <div class="equipe-card-tit">📞 Vendas Call Center</div>
+        <div id="equipe-vendas-cc">
           <div class="loading"><div class="spinner"></div>Carregando...</div>
         </div>
       </div>
@@ -6105,6 +6120,39 @@ function renderCardMetasEquipe() {
     metrica("💉 Procedimentos",tot.proc,       metaProc,    totBase.proc)       +
     metrica("💊 Injetáveis",   tot.injetaveis, metaInj,     totBase.injetaveis) +
     `</div>`;
+
+  // Card irmão "📞 Vendas Call Center" (só realizado, sem meta) — filtra
+  // equipeLancs pelos perfis de CC. Ativas apenas (não afastadas).
+  renderCardVendasCC("equipe-vendas-cc", equipeLancs);
+}
+
+// Card "Vendas Call Center" (acompanhamento sem meta) — espelha as 7 métricas
+// do card geral, mas filtra APENAS lançamentos de perfil callcenter ou
+// callcenter_coord (não-afastadas). Renderiza só o realizado — sem meta, sem
+// barra, sem projeção. Usado em 2 lugares: aba Equipe (equipe-vendas-cc) e
+// dashboard do gestor (dash-vendas-cc).
+function renderCardVendasCC(containerId, lancs) {
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const lancsCC = (lancs || []).filter(l =>
+    (l.perfil === "callcenter" || l.perfil === "callcenter_coord") &&
+    !ehAfastada(l.usuario_nome)
+  );
+  const tot = agregarTotaisEquipeLancs(lancsCC);
+  const metricaSoRealizado = (tit, val) => `
+    <div class="equipe-metrica">
+      <div class="equipe-met-tit">${tit}</div>
+      <div class="equipe-met-val">${brl(val)}</div>
+    </div>`;
+  el.innerHTML = `<div class="equipe-metricas-grid">` +
+    metricaSoRealizado("💰 Caixa",         tot.caixa)      +
+    metricaSoRealizado("💳 Crédito",       tot.credito)    +
+    metricaSoRealizado("📄 Boleto",        tot.boleto)     +
+    metricaSoRealizado("🧪 Lab",           tot.lab)        +
+    metricaSoRealizado("🩻 Imagem",        tot.img)        +
+    metricaSoRealizado("💉 Procedimentos", tot.proc)       +
+    metricaSoRealizado("💊 Injetáveis",    tot.injetaveis) +
+    `</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -6397,6 +6445,7 @@ function renderDashboard() {
   const lista = getDashLancsFiltrados();
   renderResumoDia();
   renderDashEquipe(lista);
+  renderCardVendasCC("dash-vendas-cc", lista);
   renderDashRanking(lista);
   renderDashSaidasAvulsas();
   renderDashColaboradoras(lista);
