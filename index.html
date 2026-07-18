@@ -833,6 +833,20 @@
     <!-- ══════════ ORÇAMENTOS (Fase 1) ══════════ -->
     <div id="sec-orcamentos" style="display:none">
 
+      <!-- Filtro por dia (safra). Vazio = mês inteiro (comportamento padrão).
+           Setado = TODAS as colunas mostram só cards criados naquele dia, cada
+           um no seu status atual. min/max são setados via JS pro mês corrente. -->
+      <div class="card" style="margin-bottom:14px;padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <label for="orc-filtro-dia" style="font-size:13px;font-weight:600">📅 Ver dia</label>
+          <input type="date" id="orc-filtro-dia" onchange="renderKanbanOrcamentos()"
+            style="padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r2);font-family:'Inter',sans-serif;font-size:13px;outline:none;color:var(--text)" />
+          <button type="button" onclick="resetarFiltroDiaKanban()"
+            style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r2);background:#fff;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;color:var(--text)">✕ Hoje</button>
+          <span style="font-size:11px;color:var(--text2)">Safra do dia: mostra só cards criados no dia escolhido, cada um no status atual.</span>
+        </div>
+      </div>
+
       <!-- D3.7 — Mini-dashboard (Hoje + Mês). Botões clicáveis filtram colunas do kanban. -->
       <div class="kb-mini">
         <div class="kb-mini-row">
@@ -8952,6 +8966,35 @@ async function salvarOrcamento() {
 // ─────────────────────────────────────────────────────────────
 let kanbanFiltroAtivo = null; // null | "pendentes" | "pagos"
 
+// Filtro por dia (safra). Retorna a data ISO do datepicker; se vazio, retorna hoje.
+function getDataRefKanban() {
+  const v = document.getElementById("orc-filtro-dia")?.value || "";
+  if(v) return v;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+// True quando a usuária escolheu um dia (safra ativa). Vazio = modo padrão (mês).
+function temDataRefExplicita() {
+  return !!(document.getElementById("orc-filtro-dia")?.value);
+}
+// Reseta o picker pra vazio (= hoje) e re-renderiza.
+function resetarFiltroDiaKanban() {
+  const inp = document.getElementById("orc-filtro-dia");
+  if(inp) inp.value = "";
+  renderKanbanOrcamentos();
+}
+// Ajusta min/max do picker pro mês corrente (bate com o listener acompLancs).
+function configurarDatepickerKanban() {
+  const inp = document.getElementById("orc-filtro-dia");
+  if(!inp) return;
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const mm = String(m+1).padStart(2,"0");
+  const ultimo = new Date(y, m+1, 0).getDate();
+  inp.min = `${y}-${mm}-01`;
+  inp.max = `${y}-${mm}-${String(ultimo).padStart(2,"0")}`;
+}
+
 function toggleFiltroKanbanMini(filtro) {
   // null força reset; clicar 2x no mesmo botão também reseta
   kanbanFiltroAtivo = (filtro && kanbanFiltroAtivo === filtro) ? null : filtro;
@@ -8959,12 +9002,10 @@ function toggleFiltroKanbanMini(filtro) {
 }
 
 // Calcula stats {pendentes, pagos, taxa} de um array de docs.
-// Filtra por dia atual se periodo="dia"; senão, considera o array todo (mês).
+// Filtra pela data de referência do kanban se periodo="dia" (respeita o
+// datepicker "Ver dia"; vazio = hoje); senão, considera o array todo (mês).
 function calcularKanbanStats(docs, periodo) {
-  const hojeStr = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-  })();
+  const dataRef = getDataRefKanban();
   function isoDoc(l) {
     const ts = l.data_hora || l.criado_em;
     const d = ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
@@ -8973,7 +9014,7 @@ function calcularKanbanStats(docs, periodo) {
   }
   const filtrados = docs.filter(l => {
     if((l.tipo || "entrada") !== "entrada") return false;
-    if(periodo === "dia") return isoDoc(l) === hojeStr;
+    if(periodo === "dia") return isoDoc(l) === dataRef;
     return true; // mês inteiro (acompLancs já é filtrado por mes_ano no listener)
   });
 
@@ -9038,6 +9079,9 @@ function renderKanbanMiniDashboard() {
 function renderKanbanOrcamentos() {
   if(!document.getElementById("orc-kanban")) return;
 
+  // Datepicker "Ver dia": mantém min/max no mês corrente (bate com o listener).
+  configurarDatepickerKanban();
+
   // Ordena por criado_em desc (mais recentes em cima) — feito no cliente
   // pra evitar índice composto extra no Firestore.
   const ordenada = [...acompLancs].sort((a,b) => {
@@ -9052,6 +9096,10 @@ function renderKanbanOrcamentos() {
   const ate   = document.getElementById("orc-filtro-ate")?.value    || "";
   const busca = (document.getElementById("orc-filtro-busca")?.value || "").toLowerCase();
   const stat  = document.getElementById("orc-filtro-status")?.value || "";
+  // Safra do dia: quando o picker tem valor, TODAS as colunas passam a mostrar
+  // só cards com data_hora/criado_em === dia escolhido.
+  const dataRef        = getDataRefKanban();
+  const dataRefExplic  = temDataRefExplicita();
 
   function dataDoc(o) {
     // Schema novo prefere data_hora (timestamp do atendimento); fallback criado_em
@@ -9065,6 +9113,7 @@ function renderKanbanOrcamentos() {
     const ds = dataDoc(o);
     if(de  && ds && ds < de)  return false;
     if(ate && ds && ds > ate) return false;
+    if(dataRefExplic && ds !== dataRef) return false;
     // Schema novo: paciente_nome (Fase 1 era `paciente`)
     if(busca && !(o.paciente_nome || o.paciente || "").toLowerCase().includes(busca)) return false;
     return true;
@@ -9084,19 +9133,18 @@ function renderKanbanOrcamentos() {
     col.style.display = visivel ? "" : "none";
   });
 
-  // Distribui em 5 colunas. "pago" só aceita docs com data===hoje (D3.4).
-  // "recusado" mostra todos os do mês (sem filtro de data extra).
+  // Distribui em 5 colunas. "pago" só aceita docs com data === dataRef.
+  // Sem picker, dataRef = hoje (comportamento D3.4). Com picker, o outer
+  // filter já restringiu ao dia; esta checagem vira redundante mas consistente.
+  // "recusado" mostra todos os do mês (sem filtro de data extra) quando picker
+  // vazio; com picker, o outer filter já o restringiu ao dia.
   const colunas = { lancar:[], link_enviado:[], acompanhar:[], pago:[], recusado:[] };
-  const hojeStr = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-  })();
   filtrados.forEach(o => {
     const s = o.status || "acompanhar";
     if(s === "pago") {
-      // Só pagos do dia atual + somente entradas (saídas-doc com id_par ficam fora)
+      // Só pagos do dia de referência + somente entradas (saídas-doc com id_par ficam fora)
       if((o.tipo || "entrada") !== "entrada") return;
-      if(dataDoc(o) !== hojeStr) return;
+      if(dataDoc(o) !== dataRef) return;
       colunas.pago.push(o);
       return;
     }
