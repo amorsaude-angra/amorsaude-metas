@@ -2165,6 +2165,11 @@
         <label>Meta de Crédito — Recepção (R$)</label>
         <input type="text" id="mm-credito-recepcao" placeholder="0,00" oninput="mascaraValor(this)" />
       </div>
+      <div class="modal-sec-label">Call Center</div>
+      <div class="fg">
+        <label>Meta de Caixa — Call Center (equipe) (R$)</label>
+        <input type="text" id="mm-caixa-callcenter-equipe" placeholder="0,00" oninput="mascaraValor(this)" />
+      </div>
       <div class="modal-sec-label">Exames &amp; Procedimentos</div>
       <div class="fg">
         <label>Meta Exames Laboratoriais (R$)</label>
@@ -2446,6 +2451,9 @@ const METAS_EQUIPE_PADRAO = {
   meta_img_equipe:                0,
   meta_proc_equipe:               0,
   meta_injetaveis_equipe:         0,
+  // Call Center Etapa 3: meta única de caixa da equipe. Meses antigos ficam
+  // com 0 (card mostra "Meta não definida" via guard existente em metrica()).
+  meta_caixa_callcenter_equipe:   0,
 };
 
 // Perfis que têm meta de crédito
@@ -4420,7 +4428,13 @@ function atualizarCards() {
     const lancMesBase = lancsAteOntem(lancMes);
     ({ caixa: caixaBase, credito: creditoBase } = calcTotais(lancMesBase));
   }
-  const metaCaixa   = metas.meta_caixa_recepcao||0;
+  // Call Center: SEM meta individual (Etapa 3 = meta única equipe). Card
+  // individual usa meta_caixa_callcenter_equipe como referência — atendente
+  // vê a própria contribuição vs a meta coletiva.
+  const ehCC        = (perfil === "callcenter" || perfil === "callcenter_coord");
+  const metaCaixa   = ehCC
+                      ? (metas.meta_caixa_callcenter_equipe || 0)
+                      : (metas.meta_caixa_recepcao          || 0);
   const metaCredito = metas.meta_credito_recepcao||0;
   const contBoleto  = lancMes.filter(_ehLancBoleto).length;
   contBoletoBase    = historicoIndividual
@@ -5510,6 +5524,8 @@ function renderHistorico(lista, dataSel) {
 function atualizarCardPremiacao(caixa, credito, metaCaixa, metaCredito, perfil, contBoleto, contBoletoBase) {
   const el = document.getElementById("card-prem");
   if(!el) return;
+  // Call Center não tem Premiação Boleto — esconde o card totalmente.
+  if(perfil === "callcenter" || perfil === "callcenter_coord") { el.innerHTML = ""; return; }
 
   const m         = metas || {};
   // Numerador dinâmico (coerente com diasPassF dinâmico — ambos descontam feriados)
@@ -6074,6 +6090,19 @@ function renderCardMetasEquipe() {
           ${projHtml}
         ` : '<div class="equipe-met-meta">Meta não definida</div>'}
       </div>`;
+  }
+
+  // Call Center (Etapa 3): card único de Caixa. equipeLancs já está escopado
+  // por área via iniciarListenerEquipe (Etapa 2), então tot.caixa é APENAS
+  // callcenter+callcenter_coord — não vaza recepção. Meses antes do MARCO
+  // (Mai/2026) ficam com tot=0 (CC não existia); retrocompat OK.
+  const perfilViewer = usuario?.perfil;
+  if(perfilViewer === "callcenter" || perfilViewer === "callcenter_coord") {
+    const metaCaixaCC = m.meta_caixa_callcenter_equipe || 0;
+    el.innerHTML = fonteHtml + `<div class="equipe-metricas-grid">` +
+      metrica("💰 Caixa Call Center", tot.caixa, metaCaixaCC, totBase.caixa) +
+      `</div>`;
+    return;
   }
 
   const metaCaixa   = m.meta_caixa_equipe        || METAS_EQUIPE_PADRAO.meta_caixa_equipe;
@@ -8284,6 +8313,7 @@ function abrirModalMetas() {
   set("mm-dias-uteis",       m.dias_uteis            || 22);
   set("mm-caixa-recepcao",   m.meta_caixa_recepcao   || 0);
   set("mm-credito-recepcao", m.meta_credito_recepcao || 0);
+  set("mm-caixa-callcenter-equipe", m.meta_caixa_callcenter_equipe || 0);
   set("mm-lab",              m.meta_lab_equipe        || 0);
   set("mm-img",              m.meta_img_equipe        || 0);
   set("mm-proc",             m.meta_proc_equipe       || 0);
@@ -8312,6 +8342,7 @@ async function salvarModalMetas() {
     dias_uteis:            getN("mm-dias-uteis"),
     meta_caixa_recepcao:   get("mm-caixa-recepcao"),
     meta_credito_recepcao: get("mm-credito-recepcao"),
+    meta_caixa_callcenter_equipe: get("mm-caixa-callcenter-equipe"),
     meta_lab_equipe:            get("mm-lab"),
     meta_img_equipe:            get("mm-img"),
     meta_proc_equipe:           get("mm-proc"),
